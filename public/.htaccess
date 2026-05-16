@@ -1,0 +1,14 @@
+RewriteEngine On
+
+# Allow direct access to real files (assets, uploads)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Route everything else through index.php
+RewriteRule ^(.*)$ index.php?route=$1 [QSA,L]
+
+# Block access to sensitive paths
+RedirectMatch 403 ^/config/
+RedirectMatch 403 ^/core/
+RedirectMatch 403 ^/cron/
+RedirectMatch 403 ^/vendor/
