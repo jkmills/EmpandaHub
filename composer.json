@@ -1,0 +1,15 @@
+{
+    "require": {
+        "phpmailer/phpmailer": "^6.9",
+        "tecnickcom/tcpdf": "^6.7"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\Core\\": "core/",
+            "App\\Modules\\": "modules/"
+        }
+    },
+    "config": {
+        "vendor-dir": "vendor"
+    }
+}

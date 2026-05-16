@@ -1,0 +1,6 @@
+config/config.php
+vendor/
+public/uploads/*
+!public/uploads/.gitkeep
+*.log
+.DS_Store
