@@ -1,8 +1,8 @@
 <?php
-$orgColor = '#2563eb';
+$orgColor   = '#2563eb';
+$body_class = 'auth-layout';
 require ROOT . '/views/layout/header.php';
 ?>
-<body class="auth-layout">
 <div class="auth-box">
     <div class="auth-logo"><?= htmlspecialchars(APP_NAME, ENT_QUOTES, 'UTF-8') ?></div>
 

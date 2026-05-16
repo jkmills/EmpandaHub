@@ -12,32 +12,7 @@ class CrmController extends Controller
 
     private function layout(string $view, array $data = []): void
     {
-        $this->loadOrgData($data);
-        $data['body_class'] = 'app-layout';
-        ob_start();
-        $this->render($view, $data);
-        $content = ob_get_clean();
-        require ROOT . '/views/layout/header.php';
-        require ROOT . '/views/layout/nav.php';
-        echo '<div class="flash-messages">';
-        foreach (Flash::get() as $msg) {
-            echo '<div class="flash flash-' . htmlspecialchars($msg['type'], ENT_QUOTES, 'UTF-8') . '">'
-                . htmlspecialchars($msg['message'], ENT_QUOTES, 'UTF-8') . '</div>';
-        }
-        echo '</div>';
-        echo $content;
-        require ROOT . '/views/layout/footer.php';
-    }
-
-    private function loadOrgData(array &$data): void
-    {
-        $org = Database::getInstance()->prepare('SELECT * FROM organizations WHERE id = ?');
-        $org->execute([Auth::orgId()]);
-        $row = $org->fetch();
-        $data['orgName']    = $row['name'] ?? APP_NAME;
-        $data['orgColor']   = $row['primary_color'] ?? '#2563eb';
-        $data['orgLogo']    = $row['logo'] ?? '';
-        $data['orgModules'] = json_decode($row['config_json'] ?? '{}', true)['modules'] ?? [];
+        $this->renderLayout($view, $data);
     }
 
     public function index(array $params): void

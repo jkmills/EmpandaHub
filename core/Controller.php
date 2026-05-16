@@ -13,6 +13,44 @@ abstract class Controller
         require $viewFile;
     }
 
+    protected function loadOrgData(array &$data): void
+    {
+        $stmt = Database::getInstance()->prepare('SELECT * FROM organizations WHERE id = ?');
+        $stmt->execute([Auth::orgId()]);
+        $row = $stmt->fetch() ?: [];
+        $data['org']        = $row;
+        $data['orgName']    = $row['name']          ?? APP_NAME;
+        $data['orgColor']   = $row['primary_color'] ?? '#2563eb';
+        $data['orgLogo']    = $row['logo']           ?? '';
+        $data['orgModules'] = json_decode($row['config_json'] ?? '{}', true)['modules'] ?? [];
+    }
+
+    protected function renderLayout(string $view, array $data = []): void
+    {
+        if (!isset($data['orgName'])) {
+            $this->loadOrgData($data);
+        }
+        $data['body_class'] = $data['body_class'] ?? 'app-layout';
+
+        ob_start();
+        $this->render($view, $data);
+        $content = ob_get_clean();
+
+        // Extract into this scope so header.php / nav.php receive $orgColor, $orgName, etc.
+        extract($data, EXTR_SKIP);
+
+        require ROOT . '/views/layout/header.php';
+        require ROOT . '/views/layout/nav.php';
+        echo '<div class="flash-messages">';
+        foreach (Flash::get() as $msg) {
+            echo '<div class="flash flash-' . htmlspecialchars($msg['type'], ENT_QUOTES, 'UTF-8') . '">'
+                . htmlspecialchars($msg['message'], ENT_QUOTES, 'UTF-8') . '</div>';
+        }
+        echo '</div>';
+        echo $content;
+        require ROOT . '/views/layout/footer.php';
+    }
+
     protected function redirect(string $path, int $status = 302): void
     {
         $url = str_starts_with($path, 'http') ? $path : APP_URL . '/' . ltrim($path, '/');

@@ -15,6 +15,7 @@ services:
       bash -c "
         docker-php-ext-install pdo pdo_mysql &&
         a2enmod rewrite &&
+        chmod 777 /var/www/html/public/uploads &&
         apache2-foreground
       "
 

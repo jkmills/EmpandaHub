@@ -6,4 +6,4 @@
     <title><?= htmlspecialchars(($pageTitle ?? '') ? $pageTitle . ' — ' . ($orgName ?? APP_NAME) : ($orgName ?? APP_NAME), ENT_QUOTES, 'UTF-8') ?></title>
     <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/app.css">
 </head>
-<body>
+<body class="<?= htmlspecialchars($body_class ?? '', ENT_QUOTES, 'UTF-8') ?>">
