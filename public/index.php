@@ -190,6 +190,8 @@ $router->post('/settings/import',                 'SettingsController', 'importR
 $router->get('/settings/updates',                 'SettingsController', 'updates');
 $router->post('/settings/updates/check',          'SettingsController', 'checkUpdate');
 $router->post('/settings/updates/migrate',        'SettingsController', 'runMigrations');
+$router->post('/settings/updates/upgrade',        'SettingsController', 'upgradePerform');
+$router->post('/settings/updates/upgrade/clear-lock', 'SettingsController', 'clearUpgradeLock');
 
 // Dispatch
 $uri    = $_GET['route'] ?? '/';

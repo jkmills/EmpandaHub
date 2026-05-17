@@ -1,11 +1,18 @@
 <?php
-/** @var array $release — from Updater::latestRelease() or null */
+/** @var array|null $release */
 /** @var string $currentVersion */
 /** @var string $dbVersion */
 /** @var array $pending */
 /** @var array $migrationResults */
+/** @var array $upgradeResults */
+/** @var array $preflightErrors */
 /** @var bool $hasUpdate */
-$hasUpdate = isset($release) && $release && version_compare($release['version'] ?? '0', $currentVersion, '>');
+$hasUpdate       = isset($release) && $release && version_compare($release['version'] ?? '0', $currentVersion, '>');
+$upgradeResults  = $upgradeResults ?? [];
+$preflightErrors = $preflightErrors ?? [];
+$canUpgrade      = $hasUpdate && !empty($release['download_url']);
+$upgradeError    = (bool)array_filter($upgradeResults, fn($r) => $r['status'] === 'error');
+$upgradeOk       = !empty($upgradeResults) && !$upgradeError;
 ?>
 
 <div class="page-header">
@@ -14,6 +21,34 @@ $hasUpdate = isset($release) && $release && version_compare($release['version'] 
         <p class="page-subtitle">Manage software version and database migrations</p>
     </div>
 </div>
+
+<?php if (!empty($upgradeResults)): ?>
+<?php if ($upgradeError): ?>
+<div class="alert alert-error" style="margin-bottom:1.5rem">
+    <strong>Upgrade failed.</strong> See details below. Your files may be in a partial state — restore from backup if needed.
+</div>
+<?php else: ?>
+<div class="alert alert-success" style="margin-bottom:1.5rem">
+    <strong>Upgrade to v<?= htmlspecialchars($currentVersion, ENT_QUOTES, 'UTF-8') ?> complete!</strong>
+</div>
+<?php endif; ?>
+<div class="card" style="margin-bottom:1.5rem">
+    <div class="card-header"><h3>Upgrade Results</h3></div>
+    <div class="card-body">
+        <ul style="list-style:none;padding:0;margin:0">
+        <?php foreach ($upgradeResults as $r): ?>
+            <li style="padding:.4rem .5rem;border-radius:.3rem;margin:.2rem 0;font-size:.875rem;background:<?= $r['status']==='ok'?'#dcfce7':'#fee2e2' ?>;color:<?= $r['status']==='ok'?'#166534':'#991b1b' ?>">
+                <?php
+                $icon = $r['status'] === 'ok' ? '&#10003;' : '&#10007;';
+                $step = match($r['step'] ?? '') { 'files' => '[files]', 'migration' => '[db]', default => '' };
+                ?>
+                <?= $icon ?> <span style="font-family:monospace;opacity:.7"><?= $step ?></span> <?= htmlspecialchars($r['message'], ENT_QUOTES, 'UTF-8') ?>
+            </li>
+        <?php endforeach; ?>
+        </ul>
+    </div>
+</div>
+<?php endif; ?>
 
 <?php if (!empty($migrationResults)): ?>
 <?php $anyError = array_filter($migrationResults, fn($r) => $r['status'] === 'error'); ?>
@@ -95,6 +130,56 @@ $hasUpdate = isset($release) && $release && version_compare($release['version'] 
     <?php endif; ?>
 
 </div>
+
+<?php if (!empty($preflightErrors)): ?>
+<div class="card" style="margin-bottom:1.5rem;border-color:#dc2626">
+    <div class="card-header" style="background:#fee2e2"><h3 style="color:#991b1b">Upgrade Blocked</h3></div>
+    <div class="card-body">
+        <p style="font-size:.875rem;color:#64748b;margin-bottom:.75rem">The following issues must be resolved before the in-app upgrade can run. Fix them and try again, or upgrade manually using the instructions below.</p>
+        <ul style="margin:0;padding-left:1.25rem;font-size:.875rem;color:#991b1b">
+            <?php foreach ($preflightErrors as $err): ?>
+            <li style="margin:.25rem 0"><?= htmlspecialchars($err, ENT_QUOTES, 'UTF-8') ?></li>
+            <?php endforeach; ?>
+        </ul>
+        <?php if (Updater::upgradeLockExists()): ?>
+        <form method="post" action="<?= APP_URL ?>/settings/updates/upgrade/clear-lock" style="margin-top:1rem">
+            <?= Csrf::field() ?>
+            <button type="submit" class="btn" style="background:#dc2626;font-size:.8rem">Clear Upgrade Lock</button>
+        </form>
+        <?php endif; ?>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php if ($canUpgrade && empty($upgradeResults)): ?>
+<div class="card" style="margin-bottom:1.5rem;border-color:#2563eb">
+    <div class="card-header" style="background:#eff6ff">
+        <h3 style="color:#1e40af">Upgrade to v<?= htmlspecialchars($release['version'], ENT_QUOTES, 'UTF-8') ?></h3>
+    </div>
+    <div class="card-body">
+        <p style="font-size:.875rem;color:#475569;margin-bottom:1rem">
+            The in-app upgrader will download the release ZIP from GitHub, replace application files (preserving <code>config/config.php</code> and <code>public/uploads/</code>), and apply any pending database migrations automatically.
+        </p>
+        <div style="background:#f8fafc;border-radius:.375rem;padding:.75rem 1rem;margin-bottom:1rem;font-size:.8rem;color:#475569">
+            <strong>Before you proceed:</strong>
+            <ul style="margin:.5rem 0 0;padding-left:1.25rem;line-height:1.8">
+                <li>Back up your database: <code>mysqldump -u USER -p DBNAME &gt; backup.sql</code>
+                    &nbsp;<a href="<?= APP_URL ?>/data" style="color:var(--brand)">or use Data Management &rarr;</a></li>
+                <li>Ensure your server can make outbound HTTPS requests to GitHub.</li>
+                <li>Do not close this tab or navigate away during the upgrade.</li>
+            </ul>
+        </div>
+        <form method="post" action="<?= APP_URL ?>/settings/updates/upgrade"
+              onsubmit="this.querySelector('button[type=submit]').disabled=true;this.querySelector('button[type=submit]').textContent='Upgrading…';return true;">
+            <?= Csrf::field() ?>
+            <button type="submit" class="btn" style="background:#2563eb">
+                Upgrade to v<?= htmlspecialchars($release['version'], ENT_QUOTES, 'UTF-8') ?> Now
+            </button>
+            <span style="font-size:.8rem;color:#64748b;margin-left:.75rem">This may take 30–60 seconds.</span>
+        </form>
+    </div>
+</div>
+<?php endif; ?>
 
 <?php if (!empty($pending)): ?>
 <div class="card" style="margin-bottom:1.5rem;border-color:#f59e0b">

@@ -3,9 +3,10 @@ declare(strict_types=1);
 
 class Updater
 {
-    private const GITHUB_REPO = 'jkmills/EmpandaHub';
-    private const CACHE_FILE  = ROOT . '/config/update_cache.json';
-    private const CACHE_TTL   = 86400; // 24 hours
+    private const GITHUB_REPO    = 'jkmills/EmpandaHub';
+    private const CACHE_FILE     = ROOT . '/config/update_cache.json';
+    private const CACHE_TTL      = 86400; // 24 hours
+    private const UPGRADE_LOCK   = ROOT . '/config/.upgrade_lock';
 
     public static function currentVersion(): string
     {
@@ -66,12 +67,23 @@ class Updater
         $data = json_decode($raw, true);
         if (!is_array($data) || !isset($data['tag_name'])) return null;
 
+        // Find the named ZIP release asset; fall back to zipball
+        $downloadUrl = null;
+        foreach ($data['assets'] ?? [] as $asset) {
+            if (str_ends_with($asset['name'] ?? '', '.zip')) {
+                $downloadUrl = $asset['browser_download_url'] ?? null;
+                break;
+            }
+        }
+        $downloadUrl ??= $data['zipball_url'] ?? null;
+
         $result = [
             'version'      => ltrim($data['tag_name'], 'v'),
             'tag_name'     => $data['tag_name'],
             'url'          => $data['html_url'] ?? '',
             'published_at' => $data['published_at'] ?? '',
             'body'         => $data['body'] ?? '',
+            'download_url' => $downloadUrl,
             'cached_at'    => time(),
         ];
 
@@ -120,5 +132,174 @@ class Updater
             applied_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             UNIQUE KEY uq_migrations_version (version)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+    }
+
+    /** @return array<int, string> List of error strings; empty = all clear */
+    public static function preflightCheck(): array
+    {
+        $errors = [];
+
+        if (!class_exists('ZipArchive')) {
+            $errors[] = 'PHP ZipArchive extension is not available on this server.';
+        }
+        if (!is_writable(sys_get_temp_dir())) {
+            $errors[] = 'System temp directory is not writable.';
+        }
+        foreach (['core', 'modules', 'views', 'install', 'public'] as $dir) {
+            $path = ROOT . '/' . $dir;
+            if (is_dir($path) && !is_writable($path)) {
+                $errors[] = "Directory not writable: $dir/";
+            }
+        }
+        if (file_exists(self::UPGRADE_LOCK)) {
+            $age = time() - (int)file_get_contents(self::UPGRADE_LOCK);
+            $errors[] = 'An upgrade lock file exists' . ($age > 300 ? ' (stale — may be safe to clear)' : ' — upgrade in progress') . '.';
+        }
+
+        return $errors;
+    }
+
+    public static function upgradeLockExists(): bool
+    {
+        return file_exists(self::UPGRADE_LOCK);
+    }
+
+    public static function clearUpgradeLock(): void
+    {
+        @unlink(self::UPGRADE_LOCK);
+    }
+
+    /**
+     * Download the release ZIP, extract it over ROOT, and run migrations.
+     *
+     * @return array<int, array{status: string, step: string, message: string}>
+     */
+    public static function performUpgrade(string $downloadUrl, string $newVersion): array
+    {
+        if (file_exists(self::UPGRADE_LOCK)) {
+            return [['status' => 'error', 'step' => 'lock', 'message' => 'Upgrade already in progress.']];
+        }
+
+        @file_put_contents(self::UPGRADE_LOCK, (string)time());
+        $tmpZip = null;
+        $tmpDir = null;
+
+        try {
+            // Download
+            $tmpZip = tempnam(sys_get_temp_dir(), 'empanda_upgrade_');
+            if ($tmpZip === false) {
+                throw new \RuntimeException('Could not create temp file.');
+            }
+
+            $ctx  = stream_context_create(['http' => [
+                'header'          => "User-Agent: EmpandaHub-Updater/" . self::currentVersion() . "\r\n",
+                'timeout'         => 120,
+                'follow_location' => 1,
+                'max_redirects'   => 5,
+            ]]);
+            $raw = @file_get_contents($downloadUrl, false, $ctx);
+            if ($raw === false || strlen($raw) < 1024) {
+                throw new \RuntimeException('Download failed or returned an empty file. Check server outbound connectivity.');
+            }
+            file_put_contents($tmpZip, $raw);
+
+            // Extract
+            $tmpDir = sys_get_temp_dir() . '/empanda_upgrade_' . time();
+            mkdir($tmpDir, 0755, true);
+
+            $zip = new \ZipArchive();
+            $opened = $zip->open($tmpZip);
+            if ($opened !== true) {
+                throw new \RuntimeException("Could not open ZIP archive (ZipArchive error $opened).");
+            }
+            $zip->extractTo($tmpDir);
+            $zip->close();
+
+            // Detect single-subdirectory wrapping (zipball_url produces this)
+            $extractRoot = self::findExtractRoot($tmpDir);
+
+            // Copy files, preserving config and uploads
+            self::copyTree($extractRoot, ROOT, ['config/config.php', 'public/uploads']);
+
+            // Write the new version number
+            @file_put_contents(ROOT . '/VERSION', $newVersion . "\n");
+
+            // Bust the update cache so next check sees the new version
+            @unlink(self::CACHE_FILE);
+
+            $results = [['status' => 'ok', 'step' => 'files', 'message' => 'Application files updated.']];
+
+            // Run any pending migrations
+            $db = Database::getInstance();
+            self::ensureMigrationsTable($db);
+            $migrations = self::runPendingMigrations();
+            foreach ($migrations as $m) {
+                $results[] = [
+                    'status'  => $m['status'],
+                    'step'    => 'migration',
+                    'message' => 'Migration v' . $m['version'] . ($m['status'] === 'ok' ? ' applied.' : ': ' . ($m['message'] ?? 'error')),
+                ];
+            }
+            if (!$migrations) {
+                $results[] = ['status' => 'ok', 'step' => 'migration', 'message' => 'No pending database migrations.'];
+            }
+
+            return $results;
+
+        } catch (\Throwable $e) {
+            return [['status' => 'error', 'step' => 'upgrade', 'message' => $e->getMessage()]];
+        } finally {
+            if ($tmpZip && file_exists($tmpZip)) @unlink($tmpZip);
+            if ($tmpDir && is_dir($tmpDir)) self::rmdirRecursive($tmpDir);
+            @unlink(self::UPGRADE_LOCK);
+        }
+    }
+
+    private static function findExtractRoot(string $tmpDir): string
+    {
+        $items = array_values(array_diff(scandir($tmpDir) ?: [], ['.', '..']));
+        if (count($items) === 1 && is_dir($tmpDir . '/' . $items[0])) {
+            return $tmpDir . '/' . $items[0];
+        }
+        return $tmpDir;
+    }
+
+    /** @param array<int, string> $skip Relative paths to skip (e.g. 'config/config.php') */
+    private static function copyTree(string $src, string $dst, array $skip = []): void
+    {
+        $it = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($src, \RecursiveDirectoryIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST
+        );
+        foreach ($it as $item) {
+            $rel = str_replace('\\', '/', substr($item->getPathname(), strlen($src) + 1));
+            foreach ($skip as $protected) {
+                $protected = str_replace('\\', '/', $protected);
+                if ($rel === $protected || str_starts_with($rel, $protected . '/')) {
+                    continue 2;
+                }
+            }
+            $target = $dst . DIRECTORY_SEPARATOR . $rel;
+            if ($item->isDir()) {
+                @mkdir($target, 0755, true);
+            } else {
+                if (!@copy($item->getPathname(), $target)) {
+                    throw new \RuntimeException("Could not write file: $rel — check file permissions.");
+                }
+            }
+        }
+    }
+
+    private static function rmdirRecursive(string $dir): void
+    {
+        if (!is_dir($dir)) return;
+        $it = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($dir, \RecursiveDirectoryIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::CHILD_FIRST
+        );
+        foreach ($it as $item) {
+            $item->isDir() ? @rmdir($item->getPathname()) : @unlink($item->getPathname());
+        }
+        @rmdir($dir);
     }
 }

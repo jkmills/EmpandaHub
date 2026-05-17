@@ -77,9 +77,14 @@ Pushing a `vX.Y.Z` tag triggers `.github/workflows/release.yml`, which:
    - **In-app:** Settings → Updates → Run Migrations
    - **CLI (VPS/SSH):** `php install/migrate.php`
 
-### In-app update check
+### In-app one-click upgrade
 
-Super admins see an "Update available" banner in the sidebar whenever a newer GitHub release exists (checked once per 24 hours via the GitHub API). The Settings → Updates page shows pending migrations and a one-click runner.
+Super admins see an "Update available" banner in the sidebar whenever a newer GitHub release exists (checked once per 24 hours via the GitHub API). The Settings → Updates page offers:
+
+- **Upgrade Now** — downloads the release ZIP from GitHub, replaces application files (preserving `config/config.php` and `public/uploads/`), and runs pending migrations automatically. Requires ZipArchive, writable app directories, and outbound HTTPS to GitHub.
+- **Run Migrations** — applies pending DB migrations without touching files (for manual file upgrades).
+
+Pre-flight checks run before the upgrade begins and surface any blockers (missing extension, unwritable directories, stale lock file).
 
 ---
 

@@ -139,6 +139,7 @@ class SettingsController extends Controller
             'pending'          => $pending,
             'hasUpdate'        => $hasUpdate,
             'migrationResults' => [],
+            'upgradeResults'   => [],
         ]);
     }
 
@@ -179,7 +180,81 @@ class SettingsController extends Controller
             'pending'          => $pending,
             'hasUpdate'        => $hasUpdate,
             'migrationResults' => $results,
+            'upgradeResults'   => [],
         ]);
+    }
+
+    public function upgradePerform(array $p): void
+    {
+        Auth::requireRole('super_admin');
+        $this->requirePost();
+
+        $release = Updater::latestRelease();
+        $current = Updater::currentVersion();
+
+        if (!$release || !version_compare($release['version'] ?? '0', $current, '>')) {
+            Flash::error('No update available.');
+            $this->redirect('/settings/updates');
+            return;
+        }
+
+        $downloadUrl = $release['download_url'] ?? null;
+        if (!$downloadUrl) {
+            Flash::error('No download URL available for this release. Download and apply manually.');
+            $this->redirect('/settings/updates');
+            return;
+        }
+
+        $preflight = Updater::preflightCheck();
+        if ($preflight) {
+            $release  = Updater::latestRelease();
+            $dbVer    = Updater::installedDbVersion();
+            $pending  = Updater::pendingMigrations();
+            $this->renderLayout('modules/settings/views/updates.php', [
+                'pageTitle'       => 'Updates',
+                'release'         => $release,
+                'currentVersion'  => $current,
+                'dbVersion'       => $dbVer,
+                'pending'         => $pending,
+                'hasUpdate'       => true,
+                'migrationResults' => [],
+                'upgradeResults'  => [],
+                'preflightErrors' => $preflight,
+            ]);
+            return;
+        }
+
+        $upgradeResults = Updater::performUpgrade($downloadUrl, $release['version']);
+
+        $anyError = (bool)array_filter($upgradeResults, fn($r) => $r['status'] === 'error');
+        if (!$anyError) {
+            AuditLog::record('settings.upgrade', 'organization', Auth::orgId(), "from v{$current} to v{$release['version']}");
+        }
+
+        // Re-read state after upgrade (VERSION file may have changed)
+        $newVersion = Updater::currentVersion();
+        $release2   = Updater::latestRelease();
+        $hasUpdate2 = $release2 && version_compare($release2['version'] ?? '0', $newVersion, '>');
+
+        $this->renderLayout('modules/settings/views/updates.php', [
+            'pageTitle'        => 'Updates',
+            'release'          => $release2,
+            'currentVersion'   => $newVersion,
+            'dbVersion'        => Updater::installedDbVersion(),
+            'pending'          => Updater::pendingMigrations(),
+            'hasUpdate'        => $hasUpdate2,
+            'migrationResults' => [],
+            'upgradeResults'   => $upgradeResults,
+        ]);
+    }
+
+    public function clearUpgradeLock(array $p): void
+    {
+        Auth::requireRole('super_admin');
+        $this->requirePost();
+        Updater::clearUpgradeLock();
+        Flash::success('Upgrade lock cleared.');
+        $this->redirect('/settings/updates');
     }
 
     public function importForm(array $p): void
