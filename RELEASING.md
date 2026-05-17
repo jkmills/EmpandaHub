@@ -67,18 +67,15 @@ Pushing a `vX.Y.Z` tag triggers `.github/workflows/release.yml`, which:
 
 ## User Upgrade Flow
 
-### Manual upgrade
+### Manual upgrade (shared hosting / ZIP) — preferred
 
-1. Download `empandahub-vX.Y.Z.zip` from the GitHub Releases page.
-2. Back up the database: `mysqldump -u USER -p DBNAME > backup.sql`
-3. Extract the ZIP, replacing all files **except**:
-   - `config/config.php`
-   - `public/uploads/`
-4. Run `composer install --no-dev` in the app root.
-5. Apply database migrations via one of:
+1. **Back up the database** first: `mysqldump -u USER -p DBNAME > backup.sql`
+2. Download `empandahub-vX.Y.Z.zip` from the GitHub Releases page.
+3. Upload and extract the ZIP over the existing installation. `config/config.php` and `public/uploads/` are not in the ZIP and will not be touched.
+4. Apply database migrations via one of:
+   - **Web runner:** visit `https://yoursite.com/install/upgrade.php`, authenticate as super admin, run migrations, then **delete the file**.
    - **In-app:** Settings → Updates → Run Migrations
-   - **CLI:** `php install/migrate.php`
-   - **Web runner:** `https://yoursite.com/install/upgrade.php` (then delete it)
+   - **CLI (VPS/SSH):** `php install/migrate.php`
 
 ### In-app update check
 

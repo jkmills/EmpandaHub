@@ -303,54 +303,65 @@ crontab -e
 
 ---
 
-## Option C — Shared / Managed Hosting (cPanel)
+## Option C — Shared / Managed Hosting (DirectAdmin / cPanel) ✅ Preferred for most users
 
-Use when you don't have SSH root access or prefer managed infrastructure.
+Use when you don't have SSH root access or prefer managed infrastructure. This is the simplest deployment path — no CLI required.
 
 ### Requirements
 
-- PHP 8.1+ with PDO, pdo_mysql, mbstring extensions enabled
-- MySQL 5.7+ or 8.0 database
+- PHP 8.1+ with PDO, pdo_mysql, mbstring, json extensions enabled
+- MySQL 8.0+ database
 - `.htaccess` support (mod_rewrite enabled)
 
 ### Steps
 
-1. **Create a database** in cPanel → MySQL Databases. Note the host, name, user, and password.
+1. **Create a database** in your hosting control panel.
+   - **DirectAdmin:** MySQL Management → Create Database. Note the host (`localhost`), database name, username, and password.
+   - **cPanel:** MySQL Databases → Create Database + User, then assign All Privileges.
 
-2. **Upload files** via cPanel File Manager or FTP to your domain's `public_html/` (or a subdirectory). Upload the full repository contents.
+2. **Download the release ZIP** from the [GitHub Releases page](https://github.com/jkmills/EmpandaHub/releases/latest). The file is named `empandahub-vX.Y.Z.zip`.
 
-3. **Point the document root** to the `public/` subdirectory:
-   - If you have access to Apache vhost config, set `DocumentRoot` to `public/`.
-   - If not, add a `.htaccess` in the root that redirects to `public/`:
-     ```apache
-     RewriteEngine On
-     RewriteRule ^(.*)$ public/$1 [L]
-     ```
-   This `.htaccess` is already included in the repository.
+3. **Upload and extract the ZIP** into your domain's root directory (`public_html/` or equivalent):
+   - **DirectAdmin / cPanel File Manager:** Upload the ZIP to `public_html/`, then use the Extract function.
+   - **FTP:** Extract the ZIP locally, then upload all extracted files into `public_html/`.
 
-4. **Run the installer** at `https://yourdomain.com/install/install.php`. Use the database credentials from step 1. Set `APP_URL` to your full domain with `https://`.
+   The root `.htaccess` (included in the ZIP) automatically routes requests to the `public/` subdirectory — no document root changes are needed.
 
-5. **Set upload permissions** — ensure `public/uploads/` is writable by the web server (typically chmod 775 or 755 depending on the host).
+4. **Run the installer** by visiting `https://yourdomain.com/install/install.php` in your browser. Enter the database credentials from step 1 and set `App URL` to your full domain (e.g. `https://yourdomain.com`). The installer creates `config/config.php`, builds the schema, and creates your super admin account.
 
-6. **SSL** — use cPanel's built-in Let's Encrypt integration (AutoSSL) or upload an existing certificate.
+5. **Set upload permissions** — in File Manager, set `public/uploads/` to permission `755` so the web server can write files.
+
+6. **SSL** — enable HTTPS through your hosting panel:
+   - **DirectAdmin:** SSL Certificates → Free SSL Certificate (Let's Encrypt).
+   - **cPanel:** Security → SSL/TLS → AutoSSL.
+   Once SSL is active, update `APP_URL` in `config/config.php` to use `https://`.
+
+7. **Security cleanup** — delete `install/install.php` after setup completes (or rename it). Leaving it in place is a security risk on shared hosting.
 
 ---
 
 ## Updating
 
+### Shared hosting (ZIP + web runner) — preferred
+
+1. **Back up your database** first — use the built-in Data → Backup, or run `mysqldump` via SSH if available.
+
+2. **Download the new release ZIP** from [GitHub Releases](https://github.com/jkmills/EmpandaHub/releases/latest).
+
+3. **Upload and extract the ZIP** over your existing installation (same as the initial install). This overwrites all app files. It does **not** touch `config/config.php` or `public/uploads/` (they are not in the ZIP).
+
+4. **Run pending database migrations** by visiting `https://yourdomain.com/install/upgrade.php` in your browser. Authenticate with your super admin credentials — the page lists pending migrations and runs them in order.
+
+5. **Delete `install/upgrade.php`** once the upgrade is complete.
+
+### VPS (SSH)
+
 ```bash
 cd /var/www/empandahub
 git pull origin main
+composer install --no-dev --optimize-autoloader
+php install/migrate.php
 ```
-
-There is currently no automated migration system. Schema changes are documented in commit messages and tagged with the relevant GitHub issue. Apply them manually:
-
-```bash
-# Example: apply a schema change for a new feature
-mysql -uempanda -p empandahub < install/migrations/0001_add_engagement_score.sql
-```
-
-> Migration files will live in `install/migrations/` as new modules are built.
 
 ---
 
