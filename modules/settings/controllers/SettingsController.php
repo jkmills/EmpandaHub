@@ -115,6 +115,66 @@ class SettingsController extends Controller
         $this->redirect('/settings');
     }
 
+    public function updates(array $p): void
+    {
+        Auth::requireRole('super_admin');
+        $release  = Updater::latestRelease();
+        $current  = Updater::currentVersion();
+        $dbVer    = Updater::installedDbVersion();
+        $pending  = Updater::pendingMigrations();
+        $hasUpdate = $release && version_compare($release['version'] ?? '0', $current, '>');
+
+        $this->layout('modules/settings/views/updates.php', [
+            'pageTitle'        => 'Updates',
+            'release'          => $release,
+            'currentVersion'   => $current,
+            'dbVersion'        => $dbVer,
+            'pending'          => $pending,
+            'hasUpdate'        => $hasUpdate,
+            'migrationResults' => [],
+        ]);
+    }
+
+    public function checkUpdate(array $p): void
+    {
+        Auth::requireRole('super_admin');
+        $this->requirePost();
+        Updater::latestRelease(forceRefresh: true);
+        Flash::success('Update check complete.');
+        $this->redirect('/settings/updates');
+    }
+
+    public function runMigrations(array $p): void
+    {
+        Auth::requireRole('super_admin');
+        $this->requirePost();
+
+        $db = Database::getInstance();
+        Updater::ensureMigrationsTable($db);
+
+        $results  = Updater::runPendingMigrations();
+        $release  = Updater::latestRelease();
+        $current  = Updater::currentVersion();
+        $dbVer    = Updater::installedDbVersion();
+        $pending  = Updater::pendingMigrations();
+        $hasUpdate = $release && version_compare($release['version'] ?? '0', $current, '>');
+
+        $anyError = (bool)array_filter($results, fn($r) => $r['status'] === 'error');
+        if (!$anyError && $results) {
+            AuditLog::record('settings.migrations_run', 'organization', Auth::orgId());
+        }
+
+        $this->renderLayout('modules/settings/views/updates.php', [
+            'pageTitle'        => 'Updates',
+            'release'          => $release,
+            'currentVersion'   => $current,
+            'dbVersion'        => $dbVer,
+            'pending'          => $pending,
+            'hasUpdate'        => $hasUpdate,
+            'migrationResults' => $results,
+        ]);
+    }
+
     public function importForm(array $p): void
     {
         Auth::requireRole('super_admin', 'admin');

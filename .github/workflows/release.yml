@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Verify VERSION file matches tag
+        run: |
+          FILE_VERSION=$(cat VERSION | tr -d '[:space:]')
+          TAG_VERSION="${{ steps.version.outputs.VERSION }}"
+          if [ "$FILE_VERSION" != "$TAG_VERSION" ]; then
+            echo "VERSION file ($FILE_VERSION) does not match tag ($TAG_VERSION)"
+            exit 1
+          fi
+
+      - name: Install Composer dependencies (no dev)
+        run: composer install --no-dev --prefer-dist --optimize-autoloader
+
+      - name: Build release archive
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          ARCHIVE="empandahub-v${VERSION}.zip"
+
+          zip -r "$ARCHIVE" . \
+            --exclude "*.git*" \
+            --exclude "*.github*" \
+            --exclude "config/config.php" \
+            --exclude "config/update_cache.json" \
+            --exclude "public/uploads/*" \
+            --exclude "tests/*" \
+            --exclude "docker/*" \
+            --exclude "docker-compose*.yml" \
+            --exclude "node_modules/*" \
+            --exclude "package*.json" \
+            --exclude "*.playwright*" \
+            --exclude "softaculous/empandahub-*.zip"
+
+          echo "ARCHIVE=${ARCHIVE}" >> $GITHUB_OUTPUT
+        id: build
+
+      - name: Extract changelog section for this version
+        id: changelog
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          # Extract the section between this version header and the next
+          BODY=$(awk "/^## \[$VERSION\]/{found=1; next} found && /^## \[/{exit} found{print}" CHANGELOG.md)
+          # Write to file to handle multi-line properly
+          echo "$BODY" > release_notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "EmpandaHub v${{ steps.version.outputs.VERSION }}"
+          body_path: release_notes.md
+          files: ${{ steps.build.outputs.ARCHIVE }}
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.VERSION, '-') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

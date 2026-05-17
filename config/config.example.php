@@ -1,5 +1,6 @@
 <?php
 // Copy to config.php and fill in values. Never commit config.php.
+// APP_VERSION is read from the VERSION file at runtime — do not define it here.
 
 define('DB_HOST',     'localhost');
 define('DB_NAME',     'empandahub');

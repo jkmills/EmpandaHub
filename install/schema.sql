@@ -357,4 +357,11 @@ CREATE TABLE IF NOT EXISTS audit_log (
   KEY idx_audit_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS migrations (
+  id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  version    VARCHAR(20) NOT NULL,
+  applied_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_migrations_version (version)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;

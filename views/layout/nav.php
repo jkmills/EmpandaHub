@@ -92,6 +92,14 @@ $_sClass = 'sidebar' . ($_sStyle !== 'dark' ? ' sidebar--' . $_sStyle : '');
         </ul>
     </div>
     <?php endif; ?>
+    <?php if (Auth::hasRole('super_admin') && Updater::hasUpdate()): ?>
+    <div style="padding:.5rem .75rem">
+        <a href="<?= APP_URL ?>/settings/updates" style="display:flex;align-items:center;gap:.5rem;padding:.5rem .75rem;background:#fef3c7;border:1px solid #f59e0b;border-radius:.375rem;text-decoration:none;font-size:.8rem;font-weight:600;color:#92400e">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Update available
+        </a>
+    </div>
+    <?php endif; ?>
 
     <div style="flex:1"></div>
 

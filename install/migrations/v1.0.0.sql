@@ -1,0 +1,1 @@
+-- Baseline marker for v1.0.0 — no schema changes (initial release)

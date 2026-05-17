@@ -18,7 +18,7 @@ if (file_exists(ROOT . '/vendor/autoload.php')) {
 // Core classes
 foreach ([
     'Database', 'Flash', 'Csrf', 'Auth',
-    'Controller', 'Model', 'Mailer', 'Router', 'AuditLog',
+    'Controller', 'Model', 'Mailer', 'Router', 'AuditLog', 'Updater',
 ] as $class) {
     require ROOT . '/core/' . $class . '.php';
 }
@@ -187,6 +187,9 @@ $router->post('/settings/users/:id/role',         'SettingsController', 'updateR
 $router->get('/settings/export',                  'SettingsController', 'export');
 $router->get('/settings/import',                  'SettingsController', 'importForm');
 $router->post('/settings/import',                 'SettingsController', 'importRestore');
+$router->get('/settings/updates',                 'SettingsController', 'updates');
+$router->post('/settings/updates/check',          'SettingsController', 'checkUpdate');
+$router->post('/settings/updates/migrate',        'SettingsController', 'runMigrations');
 
 // Dispatch
 $uri    = $_GET['route'] ?? '/';

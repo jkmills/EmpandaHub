@@ -69,6 +69,10 @@ function runInstall(): string
         return 'form';
     }
 
+    // Seed baseline migration marker
+    $appVersion = file_exists(__DIR__ . '/../VERSION') ? trim(file_get_contents(__DIR__ . '/../VERSION')) : '1.0.0';
+    $pdo->prepare('INSERT IGNORE INTO migrations (version) VALUES (?)')->execute([$appVersion]);
+
     // Create org
     $pdo->prepare('INSERT INTO organizations (name, primary_color) VALUES (?, ?)')->execute([$orgName, '#2563eb']);
     $orgId = (int)$pdo->lastInsertId();
