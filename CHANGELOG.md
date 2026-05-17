@@ -11,6 +11,16 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.1.0] — 2026-05-17
+
+### Added
+- In-app one-click upgrade: Settings → Updates now downloads the release ZIP from GitHub, replaces application files, and runs database migrations without leaving the admin panel. Includes pre-flight checks (ZipArchive extension, directory writability, stale lock detection).
+
+### Fixed
+- Logo upload silently failing when `public/uploads/` was not writable; now shows a clear error message.
+
+---
+
 ## [1.0.0] — 2025-05-17
 
 ### Added
@@ -31,5 +41,6 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - CSRF protection on all forms
 - PDF receipt generation via TCPDF
 
-[Unreleased]: https://github.com/jkmills/EmpandaHub/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/jkmills/EmpandaHub/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/jkmills/EmpandaHub/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/jkmills/EmpandaHub/releases/tag/v1.0.0
