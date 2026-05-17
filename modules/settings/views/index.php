@@ -3,6 +3,9 @@
     <div class="d-flex gap-1">
         <a href="<?= APP_URL ?>/settings/export" class="btn btn-secondary btn-sm">Export / Backup</a>
         <a href="<?= APP_URL ?>/settings/import" class="btn btn-secondary btn-sm">Import / Restore</a>
+        <?php if (Auth::hasRole('super_admin')): ?>
+        <a href="<?= APP_URL ?>/settings/updates" class="btn btn-secondary btn-sm">Updates</a>
+        <?php endif; ?>
     </div>
 </div>
 
