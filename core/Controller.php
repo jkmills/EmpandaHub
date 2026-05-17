@@ -22,7 +22,9 @@ abstract class Controller
         $data['orgName']    = $row['name']          ?? APP_NAME;
         $data['orgColor']   = $row['primary_color'] ?? '#2563eb';
         $data['orgLogo']    = $row['logo']           ?? '';
-        $data['orgModules'] = json_decode($row['config_json'] ?? '{}', true)['modules'] ?? [];
+        $cfg = json_decode($row['config_json'] ?? '{}', true) ?: [];
+        $data['orgModules']      = $cfg['modules']      ?? [];
+        $data['orgSidebarStyle'] = $cfg['sidebar_style'] ?? 'dark';
     }
 
     protected function renderLayout(string $view, array $data = []): void
@@ -44,11 +46,26 @@ abstract class Controller
         echo '<div class="flash-messages">';
         foreach (Flash::get() as $msg) {
             echo '<div class="flash flash-' . htmlspecialchars($msg['type'], ENT_QUOTES, 'UTF-8') . '">'
-                . htmlspecialchars($msg['message'], ENT_QUOTES, 'UTF-8') . '</div>';
+                . htmlspecialchars($msg['message'], ENT_QUOTES, 'UTF-8')
+                . '<button class="flash-close" aria-label="Dismiss" onclick="this.parentElement.remove()">&times;</button>'
+                . '</div>';
         }
         echo '</div>';
         echo $content;
         require ROOT . '/views/layout/footer.php';
+    }
+
+    protected function renderPrint(string $view, array $data = []): void
+    {
+        if (!isset($data['orgName'])) {
+            $this->loadOrgData($data);
+        }
+        ob_start();
+        $this->render($view, $data);
+        $content = ob_get_clean();
+        extract($data, EXTR_SKIP);
+        require ROOT . '/views/layout/print.php';
+        exit;
     }
 
     protected function redirect(string $path, int $status = 302): void

@@ -57,9 +57,63 @@ class CrmController extends Controller
     public function show(array $params): void
     {
         Auth::require();
-        $contact = $this->model->findWithTags((int)$params['id'], Auth::orgId());
+        $orgId   = Auth::orgId();
+        $contact = $this->model->findWithTags((int)$params['id'], $orgId);
         if (!$contact) $this->abort(404);
-        $this->layout('modules/crm/views/show.php', ['pageTitle' => $contact['first_name'] . ' ' . $contact['last_name'], 'contact' => $contact]);
+
+        $orgData = [];
+        $this->loadOrgData($orgData);
+        $modules = $orgData['orgModules'];
+
+        $boardPositions    = $this->model->getBoardPositions((int)$params['id'], $orgId);
+        $donorProfile      = ($modules['donors']     ?? false) ? $this->model->getDonorProfile((int)$params['id'], $orgId)      : null;
+        $volunteerProfile  = ($modules['volunteers'] ?? false) ? $this->model->getVolunteerProfile((int)$params['id'], $orgId)  : null;
+        $membershipProfile = ($modules['membership'] ?? false) ? $this->model->getMembershipProfile((int)$params['id'], $orgId) : null;
+
+        $this->layout('modules/crm/views/show.php', $orgData + [
+            'pageTitle'         => $contact['first_name'] . ' ' . $contact['last_name'],
+            'contact'           => $contact,
+            'boardPositions'    => $boardPositions,
+            'donorProfile'      => $donorProfile,
+            'volunteerProfile'  => $volunteerProfile,
+            'membershipProfile' => $membershipProfile,
+            'modules'           => $modules,
+        ]);
+    }
+
+    public function addBoardPosition(array $params): void
+    {
+        Auth::requireRole('super_admin', 'admin', 'staff');
+        $this->requirePost();
+        $id    = (int)$params['id'];
+        $title = trim($_POST['title'] ?? '');
+        if (!$title) {
+            Flash::error('Title is required.');
+            $this->redirect('/crm/' . $id);
+            return;
+        }
+        $this->model->addBoardPosition($id, Auth::orgId(), [
+            'title'      => $title,
+            'committee'  => trim($_POST['committee'] ?? ''),
+            'start_date' => $_POST['start_date'] ?: date('Y-m-d'),
+            'end_date'   => $_POST['end_date'] ?: null,
+            'notes'      => trim($_POST['notes'] ?? ''),
+        ]);
+        AuditLog::record('contact.board_position.add', 'contact', $id, $title);
+        Flash::success('Board position added.');
+        $this->redirect('/crm/' . $id);
+    }
+
+    public function endBoardPosition(array $params): void
+    {
+        Auth::requireRole('super_admin', 'admin', 'staff');
+        $this->requirePost();
+        $id      = (int)$params['id'];
+        $posId   = (int)$params['posId'];
+        $endDate = $_POST['end_date'] ?: date('Y-m-d');
+        $this->model->endBoardPosition($posId, Auth::orgId(), $endDate);
+        Flash::success('Position ended.');
+        $this->redirect('/crm/' . $id);
     }
 
     public function edit(array $params): void
@@ -119,6 +173,7 @@ class CrmController extends Controller
         } else {
             $this->model->addNote($id, Auth::orgId(), Auth::user()['id'], $body);
             AuditLog::record('contact.note', 'contact', $id);
+            Flash::success('Note added.');
         }
         $this->redirect('/crm/' . $id);
     }

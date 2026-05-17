@@ -138,6 +138,54 @@ class DonorController extends Controller
         $this->layout('modules/donors/views/sybunt.php', ['pageTitle' => 'SYBUNT Report', 'list' => $list]);
     }
 
+    public function singleReceipt(array $p): void
+    {
+        Auth::require();
+        $donation = $this->model->findDetail((int)$p['id'], Auth::orgId());
+        if (!$donation) $this->abort(404);
+        $this->model->markReceiptSent((int)$p['id'], Auth::orgId());
+        $this->renderPrint('modules/donors/views/receipt_single.php', [
+            'pageTitle' => 'Donation Receipt #' . $p['id'],
+            'donation'  => $donation,
+        ]);
+    }
+
+    public function receiptForm(array $p): void
+    {
+        Auth::requireRole('super_admin', 'admin', 'staff');
+        $contacts = $this->model->allContactsWithDonations(Auth::orgId());
+        $this->layout('modules/donors/views/receipt_form.php', [
+            'pageTitle' => 'Generate Summary Receipt',
+            'contacts'  => $contacts,
+        ]);
+    }
+
+    public function receiptSummary(array $p): void
+    {
+        Auth::requireRole('super_admin', 'admin', 'staff');
+        $contactId = (int)($_GET['contact_id'] ?? 0);
+        $from      = $_GET['from'] ?? '';
+        $to        = $_GET['to']   ?? '';
+
+        if (!$contactId || !$from || !$to) {
+            Flash::error('Contact and date range required.');
+            $this->redirect('/donors/receipt');
+            return;
+        }
+
+        $contact = (new CrmModel())->find($contactId, Auth::orgId());
+        if (!$contact) $this->abort(404);
+
+        $donations = $this->model->donationsByContactRange(Auth::orgId(), $contactId, $from, $to);
+        $this->renderPrint('modules/donors/views/receipt_summary.php', [
+            'pageTitle' => 'Donation Summary Receipt',
+            'contact'   => $contact,
+            'donations' => $donations,
+            'from'      => $from,
+            'to'        => $to,
+        ]);
+    }
+
     public function batchReceipt(array $p): void
     {
         Auth::requireRole('super_admin', 'admin', 'staff');

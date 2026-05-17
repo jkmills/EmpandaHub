@@ -128,6 +128,38 @@ class DonorModel extends Model
         $this->execute("UPDATE campaigns SET $sets, updated_at=NOW() WHERE id=? AND org_id=?", [...array_values($data), $id, $orgId]);
     }
 
+    public function donationsByContactRange(int $orgId, int $contactId, string $from, string $to): array
+    {
+        return $this->query(
+            'SELECT d.*, ca.name AS campaign_name
+             FROM donations d
+             LEFT JOIN campaigns ca ON ca.id = d.campaign_id
+             WHERE d.org_id = ? AND d.contact_id = ? AND d.donated_on BETWEEN ? AND ?
+             ORDER BY d.donated_on ASC',
+            [$orgId, $contactId, $from, $to]
+        );
+    }
+
+    public function markReceiptSent(int $id, int $orgId): void
+    {
+        $this->execute(
+            'UPDATE donations SET receipt_sent = 1 WHERE id = ? AND org_id = ?',
+            [$id, $orgId]
+        );
+    }
+
+    public function allContactsWithDonations(int $orgId): array
+    {
+        return $this->query(
+            'SELECT DISTINCT c.id, c.first_name, c.last_name, c.email
+             FROM contacts c
+             JOIN donations d ON d.contact_id = c.id
+             WHERE d.org_id = ? AND d.is_anonymous = 0
+             ORDER BY c.last_name, c.first_name',
+            [$orgId]
+        );
+    }
+
     public function batchFiscalYear(int $orgId, int $fy): array
     {
         return $this->query(

@@ -22,14 +22,15 @@
 <div class="card">
 <h3 style="margin-top:0">Transaction Ledger</h3>
 <div class="table-wrap"><table>
-<thead><tr><th>Date</th><th>Category</th><th>Direction</th><th>Amount</th><th>Contact</th><th>Description</th><th>FY</th></tr></thead>
+<thead><tr><th>Date</th><th>Category</th><th>Type</th><th>Amount</th><th>Contact</th><th>Description</th><th>FY</th></tr></thead>
 <tbody>
 <?php foreach ($ledger as $t): ?>
+<?php $isCredit = $t['direction'] === 'credit'; ?>
 <tr>
-    <td><?= htmlspecialchars($t['transaction_date'], ENT_QUOTES,'UTF-8') ?></td>
-    <td><span class="badge badge-info"><?= htmlspecialchars($t['category'] ?? '', ENT_QUOTES,'UTF-8') ?></span></td>
-    <td><?= htmlspecialchars($t['direction'], ENT_QUOTES,'UTF-8') ?></td>
-    <td>$<?= number_format((float)$t['amount'], 2) ?></td>
+    <td><?= fmt_date($t['transaction_date']) ?></td>
+    <td><span class="badge badge-info"><?= htmlspecialchars(ucwords(str_replace('_',' ',$t['category'] ?? '')), ENT_QUOTES,'UTF-8') ?></span></td>
+    <td><span class="badge <?= $isCredit ? 'badge-success' : 'badge-danger' ?>"><?= $isCredit ? 'Income' : 'Expense' ?></span></td>
+    <td style="font-variant-numeric:tabular-nums">$<?= number_format((float)$t['amount'], 2) ?></td>
     <td><?= htmlspecialchars(trim(($t['first_name'] ?? '').' '.($t['last_name'] ?? '')), ENT_QUOTES,'UTF-8') ?></td>
     <td><?= htmlspecialchars($t['description'] ?? '', ENT_QUOTES,'UTF-8') ?></td>
     <td><?= $t['fiscal_year'] ?></td>

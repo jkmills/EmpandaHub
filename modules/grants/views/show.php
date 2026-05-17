@@ -10,12 +10,14 @@
     <h3 style="margin-top:0">Grant Details</h3>
     <table style="width:100%">
         <tr><td class="text-muted" style="width:38%">Funder</td><td><?= htmlspecialchars($grant['funder_name'], ENT_QUOTES,'UTF-8') ?></td></tr>
-        <tr><td class="text-muted">Status</td><td><?= htmlspecialchars($grant['status'], ENT_QUOTES,'UTF-8') ?></td></tr>
+        <tr><td class="text-muted">Status</td><td><?php
+        $gsc = ['prospect'=>'badge-muted','drafting'=>'badge-warning','submitted'=>'badge-info','awarded'=>'badge-success','declined'=>'badge-danger'][$grant['status']] ?? 'badge-muted';
+        ?><span class="badge <?= $gsc ?>"><?= htmlspecialchars(ucfirst($grant['status']), ENT_QUOTES,'UTF-8') ?></span></td></tr>
         <tr><td class="text-muted">Requested</td><td><?= $grant['amount_requested'] ? '$'.number_format((float)$grant['amount_requested'], 2) : '—' ?></td></tr>
         <tr><td class="text-muted">Awarded</td><td><?= $grant['amount_awarded'] ? '$'.number_format((float)$grant['amount_awarded'], 2) : '—' ?></td></tr>
-        <tr><td class="text-muted">Deadline</td><td><?= htmlspecialchars($grant['deadline_date'] ?? '—', ENT_QUOTES,'UTF-8') ?></td></tr>
-        <tr><td class="text-muted">Submitted</td><td><?= htmlspecialchars($grant['submitted_date'] ?? '—', ENT_QUOTES,'UTF-8') ?></td></tr>
-        <tr><td class="text-muted">Period</td><td><?= htmlspecialchars(($grant['period_start'] ?? '') . ' – ' . ($grant['period_end'] ?? ''), ENT_QUOTES,'UTF-8') ?></td></tr>
+        <tr><td class="text-muted">Deadline</td><td><?= fmt_date($grant['deadline_date'] ?? null) ?></td></tr>
+        <tr><td class="text-muted">Submitted</td><td><?= fmt_date($grant['submitted_date'] ?? null) ?></td></tr>
+        <tr><td class="text-muted">Period</td><td><?= fmt_date($grant['period_start'] ?? null) ?> – <?= fmt_date($grant['period_end'] ?? null) ?></td></tr>
     </table>
     <?php if ($grant['notes']): ?><p class="text-muted mt-1"><?= nl2br(htmlspecialchars($grant['notes'], ENT_QUOTES,'UTF-8')) ?></p><?php endif; ?>
     <?php if (Auth::hasRole('super_admin','admin') && $grant['status'] !== 'awarded'): ?>

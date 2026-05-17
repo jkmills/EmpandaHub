@@ -1,4 +1,10 @@
-<div class="page-header"><h1 class="page-title">Settings</h1></div>
+<div class="page-header">
+    <h1 class="page-title">Settings</h1>
+    <div class="d-flex gap-1">
+        <a href="<?= APP_URL ?>/settings/export" class="btn btn-secondary btn-sm">Export / Backup</a>
+        <a href="<?= APP_URL ?>/settings/import" class="btn btn-secondary btn-sm">Import / Restore</a>
+    </div>
+</div>
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
 
@@ -12,14 +18,56 @@
             <?php if (!empty($org['logo'])): ?><img src="<?= APP_URL ?>/uploads/<?= htmlspecialchars($org['logo'], ENT_QUOTES,'UTF-8') ?>" style="height:40px;display:block;margin-bottom:.4rem"><?php endif; ?>
             <input type="file" name="logo" accept="image/*">
         </div>
-        <div class="form-group"><label>Brand Color</label><input type="color" name="primary_color" value="<?= htmlspecialchars($org['primary_color'] ?? '#2563eb', ENT_QUOTES,'UTF-8') ?>" style="width:60px;height:38px;padding:2px"></div>
+        <div style="border-top:1px solid var(--border);margin:.75rem 0 1rem;padding-top:.875rem">
+            <p style="font-size:.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-500);margin:0 0 .875rem">Appearance</p>
+
+            <div class="form-group">
+                <label>Brand Color</label>
+                <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
+                    <input type="color" name="primary_color" id="primaryColorPicker"
+                           value="<?= htmlspecialchars($org['primary_color'] ?? '#2563eb', ENT_QUOTES,'UTF-8') ?>"
+                           style="width:44px;height:36px;padding:2px;border-radius:var(--radius-sm);border:1.5px solid var(--gray-300);cursor:pointer;flex-shrink:0">
+                    <div style="display:flex;align-items:center;gap:.625rem;padding:.5rem .75rem;background:var(--gray-50);border:1px solid var(--border);border-radius:var(--radius-sm)">
+                        <button class="btn btn-primary btn-sm" type="button" style="pointer-events:none">Button</button>
+                        <a href="#" onclick="return false" style="font-size:.8125rem">Link text</a>
+                        <span style="font-size:.7rem;font-weight:700;padding:.2rem .5rem;border-radius:9999px;background:var(--brand-50);color:var(--brand)">Badge</span>
+                        <span style="display:inline-block;width:3px;height:18px;background:var(--brand);border-radius:2px"></span>
+                    </div>
+                </div>
+                <p class="form-hint">Updates live — save to apply permanently.</p>
+            </div>
+
+            <div class="form-group" style="margin-bottom:0">
+                <label style="margin-bottom:.6rem">Sidebar Style</label>
+                <div class="sidebar-style-picker">
+                    <?php foreach (['dark' => 'Dark', 'light' => 'Light', 'brand' => 'Brand'] as $val => $lbl): ?>
+                    <label class="sidebar-style-opt <?= ($orgSidebarStyle ?? 'dark') === $val ? 'is-selected' : '' ?>">
+                        <input type="radio" name="sidebar_style" value="<?= $val ?>" <?= ($orgSidebarStyle ?? 'dark') === $val ? 'checked' : '' ?>>
+                        <div class="ssp-thumb ssp-thumb--<?= $val ?>">
+                            <div class="ssp-rail"></div>
+                            <div class="ssp-body">
+                                <div class="ssp-line"></div>
+                                <div class="ssp-line ssp-line--short"></div>
+                                <div class="ssp-line"></div>
+                                <div class="ssp-line ssp-line--short"></div>
+                            </div>
+                        </div>
+                        <span class="ssp-label"><?= $lbl ?></span>
+                    </label>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+
         <div class="form-group"><label>Timezone</label><input name="timezone" value="<?= htmlspecialchars($org['timezone'] ?? 'America/New_York', ENT_QUOTES,'UTF-8') ?>"></div>
         <div class="form-group"><label>Fiscal Year Start Month</label><input type="number" name="fiscal_year_start" min="1" max="12" value="<?= $org['fiscal_year_start'] ?? 1 ?>"></div>
         <h4 style="margin:.8rem 0 .4rem">Module Visibility</h4>
         <?php $allMods = ['crm'=>'CRM','membership'=>'Membership','donors'=>'Donors','volunteers'=>'Volunteers','events'=>'Events','grants'=>'Grants','finance'=>'Finance']; ?>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.25rem .5rem;margin-bottom:.5rem">
         <?php foreach ($allMods as $key => $label): ?>
-        <label style="display:block;margin:.2rem 0"><input type="checkbox" name="mod_<?= $key ?>" value="1" <?= !isset($orgModules[$key]) || $orgModules[$key] ? 'checked' : '' ?>> <?= $label ?></label>
+        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer"><input type="checkbox" name="mod_<?= $key ?>" value="1" <?= !isset($orgModules[$key]) || $orgModules[$key] ? 'checked' : '' ?> style="margin:0;width:15px;height:15px;flex-shrink:0"> <?= $label ?></label>
         <?php endforeach; ?>
+        </div>
         <button type="submit" class="btn btn-primary mt-2">Save</button>
     </form>
 </div>

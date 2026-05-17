@@ -8,14 +8,41 @@ class MembershipModel extends Model
     public function allWithDetails(int $orgId): array
     {
         return $this->query(
-            'SELECT m.*, c.first_name, c.last_name, c.email, t.name AS tier_name, t.billing_cycle, t.amount
+            'SELECT m.*, c.first_name, c.last_name, c.email,
+                    t.name AS tier_name, t.billing_cycle, t.amount AS dues_rate,
+                    dp.paid_on AS last_paid_on, dp.amount AS last_paid_amount,
+                    COALESCE(totals.total_paid, 0) AS total_paid
              FROM memberships m
              JOIN contacts c ON c.id = m.contact_id
              JOIN membership_tiers t ON t.id = m.tier_id
+             LEFT JOIN dues_payments dp ON dp.id = (
+                 SELECT id FROM dues_payments WHERE membership_id = m.id AND org_id = m.org_id
+                 ORDER BY paid_on DESC, id DESC LIMIT 1
+             )
+             LEFT JOIN (
+                 SELECT membership_id, SUM(amount) AS total_paid
+                 FROM dues_payments WHERE org_id = ?
+                 GROUP BY membership_id
+             ) totals ON totals.membership_id = m.id
              WHERE m.org_id = ?
              ORDER BY c.last_name, c.first_name',
-            [$orgId]
+            [$orgId, $orgId]
         );
+    }
+
+    public function allDuesPayments(int $orgId, ?string $from, ?string $to): array
+    {
+        $sql  = 'SELECT dp.*, c.first_name, c.last_name, t.name AS tier_name, t.billing_cycle
+                 FROM dues_payments dp
+                 JOIN memberships m ON m.id = dp.membership_id
+                 JOIN contacts c ON c.id = dp.contact_id
+                 JOIN membership_tiers t ON t.id = m.tier_id
+                 WHERE dp.org_id = ?';
+        $vals = [$orgId];
+        if ($from) { $sql .= ' AND dp.paid_on >= ?'; $vals[] = $from; }
+        if ($to)   { $sql .= ' AND dp.paid_on <= ?'; $vals[] = $to; }
+        $sql .= ' ORDER BY dp.paid_on DESC, dp.id DESC';
+        return $this->query($sql, $vals);
     }
 
     public function findDetail(int $id, int $orgId): ?array
@@ -33,8 +60,25 @@ class MembershipModel extends Model
     public function getDues(int $membershipId, int $orgId): array
     {
         return $this->query(
-            'SELECT * FROM dues_payments WHERE membership_id = ? AND org_id = ? ORDER BY paid_on DESC',
+            'SELECT * FROM dues_payments WHERE membership_id = ? AND org_id = ? ORDER BY paid_on DESC, id DESC',
             [$membershipId, $orgId]
+        );
+    }
+
+    public function findDues(int $dueId, int $orgId): ?array
+    {
+        return $this->queryOne(
+            'SELECT * FROM dues_payments WHERE id = ? AND org_id = ?',
+            [$dueId, $orgId]
+        );
+    }
+
+    public function updateDues(int $id, int $orgId, array $data): void
+    {
+        $this->execute(
+            'UPDATE dues_payments SET due_date=?, paid_on=?, amount=?, method=?, reference=?, note=?, updated_at=NOW()
+             WHERE id=? AND org_id=?',
+            [$data['due_date'], $data['paid_on'], $data['amount'], $data['method'], $data['reference'], $data['note'], $id, $orgId]
         );
     }
 
@@ -42,12 +86,14 @@ class MembershipModel extends Model
     {
         $db   = Database::getInstance();
         $stmt = $db->prepare(
-            'INSERT INTO dues_payments (org_id, membership_id, contact_id, amount, paid_on, method, note)
-             VALUES (?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO dues_payments (org_id, membership_id, contact_id, due_date, amount, paid_on, method, reference, note)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
             $data['org_id'], $data['membership_id'], $data['contact_id'],
-            $data['amount'], $data['paid_on'], $data['method'] ?? null, $data['note'] ?? null,
+            $data['due_date'] ?? null,
+            $data['amount'], $data['paid_on'],
+            $data['method'] ?? null, $data['reference'] ?? null, $data['note'] ?? null,
         ]);
         $id = (int)$db->lastInsertId();
 
@@ -118,11 +164,44 @@ class MembershipModel extends Model
     public function overdueReport(int $orgId): array
     {
         return $this->query(
-            'SELECT m.*, c.first_name, c.last_name, c.email, t.name AS tier_name
-             FROM memberships m JOIN contacts c ON c.id = m.contact_id JOIN membership_tiers t ON t.id = m.tier_id
+            'SELECT m.*, c.first_name, c.last_name, c.email,
+                    t.name AS tier_name, t.amount AS dues_rate, t.billing_cycle,
+                    dp.paid_on AS last_paid_on,
+                    COALESCE(totals.total_paid, 0) AS total_paid
+             FROM memberships m
+             JOIN contacts c ON c.id = m.contact_id
+             JOIN membership_tiers t ON t.id = m.tier_id
+             LEFT JOIN dues_payments dp ON dp.id = (
+                 SELECT id FROM dues_payments WHERE membership_id = m.id AND org_id = m.org_id
+                 ORDER BY paid_on DESC LIMIT 1
+             )
+             LEFT JOIN (
+                 SELECT membership_id, SUM(amount) AS total_paid
+                 FROM dues_payments WHERE org_id = ?
+                 GROUP BY membership_id
+             ) totals ON totals.membership_id = m.id
              WHERE m.org_id = ? AND m.status = "expired"
              ORDER BY m.end_date',
-            [$orgId]
+            [$orgId, $orgId]
+        );
+    }
+
+    public function recordHistory(int $membershipId, int $orgId, int $contactId, string $eventType, ?string $oldValue = null, ?string $newValue = null, ?string $notes = null): void
+    {
+        $this->execute(
+            'INSERT INTO membership_history (org_id, membership_id, contact_id, event_type, old_value, new_value, notes)
+             VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [$orgId, $membershipId, $contactId, $eventType, $oldValue, $newValue, $notes]
+        );
+    }
+
+    public function getHistory(int $contactId, int $orgId): array
+    {
+        return $this->query(
+            'SELECT * FROM membership_history
+             WHERE contact_id = ? AND org_id = ?
+             ORDER BY created_at DESC',
+            [$contactId, $orgId]
         );
     }
 

@@ -1,6 +1,7 @@
-config/config.php
+node_modules/
+test-results/
+tests/playwright-report/
 vendor/
-public/uploads/*
-!public/uploads/.gitkeep
-*.log
-.DS_Store
+*.env
+.env
+uploads/

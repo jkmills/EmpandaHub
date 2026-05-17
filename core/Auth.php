@@ -96,4 +96,22 @@ class Auth
         $min       = $hierarchy[$minRole] ?? PHP_INT_MAX;
         return $current <= $min;
     }
+
+    public static function orgModules(): array
+    {
+        if (!self::check()) return [];
+        if (isset($_SESSION['org_modules'])) return $_SESSION['org_modules'];
+        $stmt = Database::getInstance()->prepare(
+            'SELECT config_json FROM organizations WHERE id = ?'
+        );
+        $stmt->execute([self::orgId()]);
+        $row = $stmt->fetch();
+        $cfg = json_decode($row['config_json'] ?? '{}', true) ?: [];
+        return $_SESSION['org_modules'] = $cfg['modules'] ?? [];
+    }
+
+    public static function clearOrgCache(): void
+    {
+        unset($_SESSION['org_modules']);
+    }
 }

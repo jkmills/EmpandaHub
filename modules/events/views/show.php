@@ -12,10 +12,20 @@
 <div class="card">
     <h3 style="margin-top:0">Details</h3>
     <table style="width:100%">
-        <tr><td class="text-muted" style="width:35%">Date</td><td><?= htmlspecialchars($event['event_date'], ENT_QUOTES,'UTF-8') ?></td></tr>
+        <tr><td class="text-muted" style="width:35%">Date</td><td><?= fmt_date($event['event_date']) ?></td></tr>
         <tr><td class="text-muted">Time</td><td><?= htmlspecialchars(($event['start_time'] ?? '') . ($event['end_time'] ? ' – '.$event['end_time'] : ''), ENT_QUOTES,'UTF-8') ?></td></tr>
         <tr><td class="text-muted">Location</td><td><?= htmlspecialchars($event['location'] ?? '—', ENT_QUOTES,'UTF-8') ?></td></tr>
-        <tr><td class="text-muted">Registered</td><td><?= $event['reg_count'] ?><?= $event['capacity'] ? ' / '.$event['capacity'] : '' ?></td></tr>
+        <tr><td class="text-muted">Registered</td><td>
+            <?= $event['reg_count'] ?><?= $event['capacity'] ? ' / '.$event['capacity'] : '' ?>
+            <?php if ($event['capacity'] > 0):
+                $pct = min(100, round($event['reg_count'] / $event['capacity'] * 100));
+                $barColor = $pct >= 100 ? '#dc2626' : ($pct >= 80 ? '#d97706' : 'var(--brand)');
+            ?>
+            <div class="progress" style="margin-top:.3rem;width:140px">
+                <div class="progress-bar" style="width:<?= $pct ?>%;background:<?= $barColor ?>"></div>
+            </div>
+            <?php endif; ?>
+        </td></tr>
         <tr><td class="text-muted">Price</td><td><?= $event['price'] > 0 ? '$'.number_format((float)$event['price'], 2) : 'Free' ?></td></tr>
         <tr><td class="text-muted">Status</td><td><?= $event['is_published'] ? 'Published' : 'Draft' ?></td></tr>
     </table>

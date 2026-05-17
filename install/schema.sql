@@ -60,6 +60,37 @@ CREATE TABLE IF NOT EXISTS contact_tags (
   KEY idx_ctags_contact (contact_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS board_positions (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  org_id      INT UNSIGNED NOT NULL,
+  contact_id  INT UNSIGNED NOT NULL,
+  title       VARCHAR(100) NOT NULL,
+  committee   VARCHAR(100) DEFAULT NULL,
+  start_date  DATE         NOT NULL,
+  end_date    DATE         DEFAULT NULL,
+  notes       VARCHAR(255) DEFAULT NULL,
+  created_at  DATETIME     DEFAULT CURRENT_TIMESTAMP,
+  updated_at  DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_bp_contact FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE CASCADE,
+  CONSTRAINT fk_bp_org     FOREIGN KEY (org_id)     REFERENCES organizations(id),
+  KEY idx_bp_contact (contact_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS membership_history (
+  id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  org_id        INT UNSIGNED NOT NULL,
+  membership_id INT UNSIGNED NOT NULL,
+  contact_id    INT UNSIGNED NOT NULL,
+  event_type    ENUM('created','renewed','status_change','tier_change','expired','cancelled') NOT NULL,
+  old_value     VARCHAR(255) DEFAULT NULL,
+  new_value     VARCHAR(255) DEFAULT NULL,
+  notes         VARCHAR(255) DEFAULT NULL,
+  created_at    DATETIME     DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_mh_membership FOREIGN KEY (membership_id) REFERENCES memberships(id) ON DELETE CASCADE,
+  CONSTRAINT fk_mh_contact    FOREIGN KEY (contact_id)    REFERENCES contacts(id),
+  KEY idx_mh_membership (membership_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS contact_notes (
   id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   org_id     INT UNSIGNED NOT NULL,
@@ -112,8 +143,10 @@ CREATE TABLE IF NOT EXISTS dues_payments (
   membership_id INT UNSIGNED NOT NULL,
   contact_id    INT UNSIGNED NOT NULL,
   amount        DECIMAL(10,2) NOT NULL,
+  due_date      DATE          DEFAULT NULL,
   paid_on       DATE          NOT NULL,
   method        VARCHAR(50)   DEFAULT NULL,
+  reference     VARCHAR(100)  DEFAULT NULL,
   note          VARCHAR(255)  DEFAULT NULL,
   receipt_sent  TINYINT(1)    DEFAULT 0,
   created_at    DATETIME      DEFAULT CURRENT_TIMESTAMP,

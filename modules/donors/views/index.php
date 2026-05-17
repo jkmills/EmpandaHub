@@ -5,6 +5,7 @@
         <a href="<?= APP_URL ?>/donors/lybunt" class="btn btn-secondary btn-sm">LYBUNT</a>
         <a href="<?= APP_URL ?>/donors/sybunt" class="btn btn-secondary btn-sm">SYBUNT</a>
         <a href="<?= APP_URL ?>/donors/batch-receipt" class="btn btn-secondary btn-sm">Batch Receipts</a>
+        <a href="<?= APP_URL ?>/donors/receipt" class="btn btn-secondary btn-sm">Summary Receipt</a>
         <?php if (Auth::hasRole('super_admin','admin','staff')): ?>
         <a href="<?= APP_URL ?>/donors/create" class="btn btn-primary btn-sm">+ Record</a>
         <?php endif; ?>
@@ -28,6 +29,15 @@
 <?php endforeach; ?>
 <?php if (!$donations): ?><tr><td colspan="7" class="text-muted" style="text-align:center">No donations yet.</td></tr><?php endif; ?>
 </tbody>
+<?php if ($donations): ?>
+<tfoot>
+    <tr style="background:#f8fafc">
+        <td style="font-weight:600;padding-top:.5rem"><?= count($donations) ?> donation<?= count($donations) !== 1 ? 's' : '' ?></td>
+        <td style="font-weight:700;padding-top:.5rem">$<?= number_format(array_sum(array_column($donations, 'amount')), 2) ?></td>
+        <td colspan="5"></td>
+    </tr>
+</tfoot>
+<?php endif; ?>
 </table>
 </div>
 </div>
