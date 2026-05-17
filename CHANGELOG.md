@@ -11,6 +11,16 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.1.2] — 2026-05-17
+
+### Added
+- In-app upgrader now automatically creates a full data backup before replacing any files; backup is available to download from the upgrade results page.
+
+### Changed
+- Updates page: manual upgrade steps collapsed into a fallback `<details>` section; pre-upgrade checklist replaced with a description of what happens automatically.
+
+---
+
 ## [1.1.1] — 2026-05-17
 
 ### Fixed
@@ -48,7 +58,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - CSRF protection on all forms
 - PDF receipt generation via TCPDF
 
-[Unreleased]: https://github.com/jkmills/EmpandaHub/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/jkmills/EmpandaHub/compare/v1.1.2...HEAD
+[1.1.2]: https://github.com/jkmills/EmpandaHub/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/jkmills/EmpandaHub/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/jkmills/EmpandaHub/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/jkmills/EmpandaHub/releases/tag/v1.0.0
