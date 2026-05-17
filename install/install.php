@@ -111,6 +111,15 @@ PHP;
         return 'form';
     }
 
+    // Ensure uploads directory exists and is writable
+    $uploadsDir = dirname(__DIR__) . '/public/uploads';
+    if (!is_dir($uploadsDir)) {
+        mkdir($uploadsDir, 0755, true);
+    }
+    if (!is_writable($uploadsDir)) {
+        @chmod($uploadsDir, 0755);
+    }
+
     return 'success';
 }
 ?>

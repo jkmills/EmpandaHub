@@ -117,6 +117,15 @@ if (file_put_contents($configPath, $config) === false) {
     exit(1);
 }
 
+// Ensure uploads directory exists and is writable
+$uploadsDir = $root . '/public/uploads';
+if (!is_dir($uploadsDir)) {
+    mkdir($uploadsDir, 0755, true);
+}
+if (!is_writable($uploadsDir)) {
+    @chmod($uploadsDir, 0755);
+}
+
 echo "EmpandaHub installed successfully.\n";
 echo "Login: $appUrl\n";
 echo "Admin: $adminEmail\n";

@@ -36,8 +36,15 @@ class SettingsController extends Controller
             $ext   = strtolower(pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION));
             $allow = ['jpg', 'jpeg', 'png', 'gif', 'svg'];
             if (!in_array($ext, $allow)) { Flash::error('Invalid logo file type.'); $this->redirect('/settings'); }
+            if (!is_writable(UPLOAD_DIR)) {
+                Flash::error('Upload failed: uploads directory is not writable. Check folder permissions on public/uploads/.');
+                $this->redirect('/settings');
+            }
             $filename = 'logo_' . $orgId . '.' . $ext;
-            move_uploaded_file($_FILES['logo']['tmp_name'], UPLOAD_DIR . $filename);
+            if (!move_uploaded_file($_FILES['logo']['tmp_name'], UPLOAD_DIR . $filename)) {
+                Flash::error('Upload failed: could not save logo file. Check folder permissions on public/uploads/.');
+                $this->redirect('/settings');
+            }
             $logo = $filename;
         }
 
