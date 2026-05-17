@@ -11,6 +11,13 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.1.1] — 2026-05-17
+
+### Fixed
+- Updates page had no permanent link; super admins can now always reach it via the Settings page header button.
+
+---
+
 ## [1.1.0] — 2026-05-17
 
 ### Added
@@ -41,6 +48,7 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - CSRF protection on all forms
 - PDF receipt generation via TCPDF
 
-[Unreleased]: https://github.com/jkmills/EmpandaHub/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/jkmills/EmpandaHub/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/jkmills/EmpandaHub/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/jkmills/EmpandaHub/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/jkmills/EmpandaHub/releases/tag/v1.0.0
