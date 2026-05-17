@@ -50,7 +50,7 @@ class SettingsController extends Controller
 
         // Module visibility
         $modules   = [];
-        $allMods   = ['crm', 'membership', 'donors', 'volunteers', 'events', 'grants', 'finance'];
+        $allMods   = ['crm', 'membership', 'donors', 'volunteers', 'events', 'grants', 'finance', 'documents'];
         foreach ($allMods as $mod) $modules[$mod] = isset($_POST['mod_' . $mod]);
 
         $existing  = $db->prepare('SELECT config_json FROM organizations WHERE id = ?');

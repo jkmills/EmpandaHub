@@ -90,6 +90,26 @@ $user = Auth::user();
     <?php endif; ?>
 </div>
 
+<?php if (!empty($atRisk)): ?>
+<div class="card" style="margin-bottom:1.5rem">
+    <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+        <h3>At-Risk Donors</h3>
+        <span style="font-size:.75rem;color:#64748b">Gave in last 2 years, not in last 12 months</span>
+    </div>
+    <?php foreach ($atRisk as $ar): ?>
+    <div style="padding:.5rem 0;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between;gap:.75rem">
+        <div>
+            <a href="<?= APP_URL ?>/crm/<?= $ar['id'] ?>" style="font-weight:500;font-size:.875rem"><?= htmlspecialchars($ar['first_name'] . ' ' . $ar['last_name'], ENT_QUOTES,'UTF-8') ?></a>
+            <span class="text-muted" style="font-size:.75rem"> &mdash; last gift <?= fmt_date($ar['last_gift']) ?></span>
+        </div>
+        <?php if ($ar['engagement_score'] !== null): ?>
+        <?= EngagementScore::badgeHtml((int)$ar['engagement_score']) ?>
+        <?php endif; ?>
+    </div>
+    <?php endforeach; ?>
+</div>
+<?php endif; ?>
+
 <div class="card">
     <div class="card-header">
         <h3>Recent Activity</h3>

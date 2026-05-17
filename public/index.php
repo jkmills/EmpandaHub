@@ -18,7 +18,7 @@ if (file_exists(ROOT . '/vendor/autoload.php')) {
 // Core classes
 foreach ([
     'Database', 'Flash', 'Csrf', 'Auth',
-    'Controller', 'Model', 'Mailer', 'Router', 'AuditLog', 'Updater',
+    'Controller', 'Model', 'Mailer', 'Router', 'AuditLog', 'Updater', 'EngagementScore',
 ] as $class) {
     require ROOT . '/core/' . $class . '.php';
 }
@@ -34,6 +34,7 @@ $moduleFiles = [
     'modules/events/controllers/EventModel.php',
     'modules/grants/controllers/GrantModel.php',
     'modules/data/controllers/DataModel.php',
+    'modules/documents/controllers/DocumentModel.php',
 ];
 foreach ($moduleFiles as $f) {
     require ROOT . '/' . $f;
@@ -165,6 +166,22 @@ $router->module('grants', function ($r) {
     $r->post('/grants/:id/reports',              'GrantController', 'addReport');
     $r->post('/grants/:id/reports/:report_id/submit', 'GrantController', 'submitReport');
 });
+
+// Documents
+$router->module('documents', function ($r) {
+    $r->get('/documents',                                       'DocumentController', 'index');
+    $r->get('/documents/create',                               'DocumentController', 'create');
+    $r->post('/documents',                                     'DocumentController', 'store');
+    $r->get('/documents/:id',                                  'DocumentController', 'show');
+    $r->post('/documents/:id/version',                         'DocumentController', 'newVersion');
+    $r->post('/documents/:id/share',                           'DocumentController', 'share');
+    $r->post('/documents/:id/share/:linkId/revoke',            'DocumentController', 'revokeShareLink');
+    $r->get('/documents/:id/download',                         'DocumentController', 'download');
+    $r->post('/documents/:id/delete',                          'DocumentController', 'delete');
+});
+
+// Public document share links — no auth, no module gate
+$router->get('/docs/:token',                                   'DocumentController', 'publicDownload');
 
 // Finance
 $router->module('finance', function ($r) {

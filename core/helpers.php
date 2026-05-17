@@ -53,7 +53,17 @@ function humanize_action(string $action): string
         'settings.import'     => 'Imported Settings',
         'user.create'         => 'Created User',
         'user.deactivate'     => 'Deactivated User',
-        'user.role_change'    => 'Changed User Role',
+        'user.role_change'        => 'Changed User Role',
+        'document.upload'         => 'Uploaded Document',
+        'document.version'        => 'Added Document Version',
+        'document.delete'         => 'Deleted Document',
+        'document.share_link.create' => 'Created Share Link',
+        'document.share_link.revoke' => 'Revoked Share Link',
     ];
     return $map[$action] ?? ucwords(str_replace(['.', '_'], ' ', $action));
+}
+
+function csrf_field(): string
+{
+    return Csrf::field();
 }

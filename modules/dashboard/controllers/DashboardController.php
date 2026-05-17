@@ -35,6 +35,27 @@ class DashboardController extends Controller
         $auditStmt->execute([$orgId]);
         $auditLog = $auditStmt->fetchAll();
 
+        // At-risk donors: gave in the last 2 years but not in the last 12 months
+        $modules   = Auth::orgModules();
+        $atRisk    = [];
+        if (!isset($modules['donors']) || $modules['donors']) {
+            $arStmt = $db->prepare(
+                "SELECT c.id, c.first_name, c.last_name, c.email,
+                        c.engagement_score, MAX(d.donated_on) AS last_gift
+                 FROM contacts c
+                 JOIN donations d ON d.contact_id = c.id AND d.org_id = c.org_id
+                 WHERE c.org_id = ?
+                   AND c.merged_into_id IS NULL
+                   AND d.donated_on >= DATE_SUB(NOW(), INTERVAL 2 YEAR)
+                 GROUP BY c.id
+                 HAVING last_gift < DATE_SUB(NOW(), INTERVAL 12 MONTH)
+                 ORDER BY c.engagement_score ASC
+                 LIMIT 10"
+            );
+            $arStmt->execute([$orgId]);
+            $atRisk = $arStmt->fetchAll();
+        }
+
         $this->renderLayout('modules/dashboard/views/index.php', [
             'pageTitle'       => 'Dashboard',
             'activeMembers'   => $activeMembers,
@@ -46,6 +67,7 @@ class DashboardController extends Controller
             'upcomingEvents'  => $upcomingEvents,
             'nextDeadlines'   => $nextDeadlines,
             'auditLog'        => $auditLog,
+            'atRisk'          => $atRisk,
         ]);
     }
 }

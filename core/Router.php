@@ -108,6 +108,7 @@ class Router
             'FinanceController'     => 'finance',
             'SettingsController'    => 'settings',
             'DataController'        => 'data',
+            'DocumentController'    => 'documents',
         ];
 
         $module = $map[$name] ?? null;

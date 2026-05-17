@@ -20,8 +20,9 @@ class CrmController extends Controller
         Auth::require();
         $orgId    = Auth::orgId();
         $q        = trim($_GET['q'] ?? '');
-        $contacts = $q ? $this->model->search($orgId, $q) : $this->model->allActive($orgId);
-        $this->layout('modules/crm/views/index.php', compact('contacts', 'q') + ['pageTitle' => 'Contacts']);
+        $sort     = in_array($_GET['sort'] ?? '', ['engagement_desc', 'engagement_asc', 'name']) ? $_GET['sort'] : 'name';
+        $contacts = $q ? $this->model->search($orgId, $q) : $this->model->allActive($orgId, $sort);
+        $this->layout('modules/crm/views/index.php', compact('contacts', 'q', 'sort') + ['pageTitle' => 'Contacts']);
     }
 
     public function create(array $params): void
@@ -70,6 +71,14 @@ class CrmController extends Controller
         $volunteerProfile  = ($modules['volunteers'] ?? false) ? $this->model->getVolunteerProfile((int)$params['id'], $orgId)  : null;
         $membershipProfile = ($modules['membership'] ?? false) ? $this->model->getMembershipProfile((int)$params['id'], $orgId) : null;
 
+        // Refresh engagement score if stale (> 24 h) or never computed
+        $staleAt = $contact['engagement_score_at'] ?? null;
+        if (!$staleAt || strtotime($staleAt) < time() - 86400) {
+            $contact['engagement_score'] = EngagementScore::refresh($orgId, (int)$params['id']);
+            $contact['engagement_score_at'] = date('Y-m-d H:i:s');
+        }
+        $scoreBreakdown = EngagementScore::breakdown($orgId, (int)$params['id'], $modules);
+
         $this->layout('modules/crm/views/show.php', $orgData + [
             'pageTitle'         => $contact['first_name'] . ' ' . $contact['last_name'],
             'contact'           => $contact,
@@ -78,6 +87,7 @@ class CrmController extends Controller
             'volunteerProfile'  => $volunteerProfile,
             'membershipProfile' => $membershipProfile,
             'modules'           => $modules,
+            'scoreBreakdown'    => $scoreBreakdown,
         ]);
     }
 

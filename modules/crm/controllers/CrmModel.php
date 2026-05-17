@@ -195,10 +195,15 @@ class CrmModel extends Model
         );
     }
 
-    public function allActive(int $orgId): array
+    public function allActive(int $orgId, string $sort = 'name'): array
     {
+        $order = match($sort) {
+            'engagement_desc' => 'engagement_score DESC, last_name, first_name',
+            'engagement_asc'  => 'engagement_score ASC, last_name, first_name',
+            default           => 'last_name, first_name',
+        };
         return $this->query(
-            'SELECT * FROM contacts WHERE org_id = ? AND merged_into_id IS NULL ORDER BY last_name, first_name',
+            "SELECT * FROM contacts WHERE org_id = ? AND merged_into_id IS NULL ORDER BY $order",
             [$orgId]
         );
     }

@@ -19,10 +19,19 @@
     </form>
 </div>
 
+<?php
+$sortNext = ($sort === 'engagement_desc') ? 'engagement_asc' : 'engagement_desc';
+$sortLabel = ($sort === 'engagement_desc') ? '&#9660;' : (($sort === 'engagement_asc') ? '&#9650;' : '');
+$sortBase = APP_URL . '/crm' . ($q ? '?q=' . urlencode($q) . '&sort=' : '?sort=');
+?>
 <div class="card">
 <div class="table-wrap">
 <table>
-<thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>City</th><th>Actions</th></tr></thead>
+<thead><tr>
+    <th>Name</th><th>Email</th><th>Phone</th><th>City</th>
+    <th><a href="<?= $sortBase . $sortNext ?>" style="text-decoration:none;color:inherit">Engagement <?= $sortLabel ?></a></th>
+    <th>Actions</th>
+</tr></thead>
 <tbody>
 <?php foreach ($contacts as $c): ?>
 <tr>
@@ -30,6 +39,9 @@
     <td><?= htmlspecialchars($c['email'] ?? '', ENT_QUOTES, 'UTF-8') ?></td>
     <td><?= htmlspecialchars($c['phone'] ?? '', ENT_QUOTES, 'UTF-8') ?></td>
     <td><?= htmlspecialchars($c['city'] ?? '', ENT_QUOTES, 'UTF-8') ?></td>
+    <td><?php if ($c['engagement_score'] !== null): ?>
+        <?= EngagementScore::badgeHtml((int)$c['engagement_score']) ?>
+    <?php else: ?><span style="color:#94a3b8;font-size:.8rem">—</span><?php endif; ?></td>
     <td>
         <a href="<?= APP_URL ?>/crm/<?= $c['id'] ?>/edit" class="btn btn-secondary btn-sm">Edit</a>
         <?php if (Auth::hasRole('super_admin','admin')): ?>
@@ -42,7 +54,7 @@
 </tr>
 <?php endforeach; ?>
 <?php if (!$contacts): ?>
-<tr><td colspan="5" style="color:#64748b;text-align:center">No contacts found.</td></tr>
+<tr><td colspan="6" style="color:#64748b;text-align:center">No contacts found.</td></tr>
 <?php endif; ?>
 </tbody>
 </table>

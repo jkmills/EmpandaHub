@@ -17,7 +17,7 @@
 
   <!-- Basic metadata -->
   <softname>EmpandaHub</softname>
-  <version>1.1.2</version>
+  <version>1.2.0</version>
   <release_date>17 May 2026</release_date>
   <category>Non Profit</category>
   <type>PHP</type>
@@ -26,7 +26,7 @@
 
   <!-- Display information -->
   <overview>EmpandaHub is a self-hosted nonprofit management platform covering CRM, membership, donors, volunteers, events, grants, and finance — all in one multi-tenant application.</overview>
-  <desc>EmpandaHub is an open-source, self-hosted nonprofit management platform designed for associations and nonprofits. It provides: contact and board management (CRM), tiered memberships with dues tracking, donor management with campaigns and PDF receipts, volunteer rostering and hour tracking, event management with registration and check-in, grant pipeline with funder database and deadline tracking, a unified finance ledger, role-based access control (super_admin / admin / staff / volunteer / readonly), and per-organization module toggling. Built with PHP 8.1 and MySQL on a lightweight custom MVC framework — no bloated dependencies.</desc>
+  <desc>EmpandaHub is an open-source, self-hosted nonprofit management platform designed for associations and nonprofits. It provides: contact and board management (CRM), tiered memberships with dues tracking, donor management with campaigns and PDF receipts, volunteer rostering and hour tracking, event management with registration and check-in, grant pipeline with funder database and deadline tracking, a unified finance ledger, document library with role-based visibility and public share links, donor engagement scoring, role-based access control (super_admin / admin / staff / volunteer / readonly), and per-organization module toggling. Built with PHP 8.1 and MySQL on a lightweight custom MVC framework — no bloated dependencies.</desc>
 
   <!-- Links -->
   <url>https://github.com/jkmills/EmpandaHub</url>
@@ -41,7 +41,7 @@
   <php_extensions>pdo,pdo_mysql,mbstring,json,xml,curl,zip</php_extensions>
 
   <!-- Database -->
-  <tables>26</tables>
+  <tables>31</tables>
   <prefix_table>1</prefix_table>
 
   <!-- Installation parameters -->

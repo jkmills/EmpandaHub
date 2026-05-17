@@ -1,5 +1,50 @@
 <div class="page-header">
-    <h1 class="page-title"><?= htmlspecialchars($contact['first_name'] . ' ' . $contact['last_name'], ENT_QUOTES, 'UTF-8') ?></h1>
+    <div>
+        <h1 class="page-title" style="display:flex;align-items:center;gap:.75rem">
+            <?= htmlspecialchars($contact['first_name'] . ' ' . $contact['last_name'], ENT_QUOTES, 'UTF-8') ?>
+            <?php if ($contact['engagement_score'] !== null): ?>
+            <?php
+            $score = (int)$contact['engagement_score'];
+            $colors = match(EngagementScore::badge($score)) {
+                'high'   => ['bg' => '#dcfce7', 'fg' => '#166534', 'ring' => '#16a34a'],
+                'medium' => ['bg' => '#fef3c7', 'fg' => '#92400e', 'ring' => '#d97706'],
+                default  => ['bg' => '#fee2e2', 'fg' => '#991b1b', 'ring' => '#dc2626'],
+            };
+            ?>
+            <span title="Engagement Score — click for breakdown" style="cursor:default;display:inline-flex;align-items:center;gap:.35rem;padding:.2rem .65rem;border-radius:999px;background:<?= $colors['bg'] ?>;color:<?= $colors['fg'] ?>;font-size:.8rem;font-weight:700;border:1.5px solid <?= $colors['ring'] ?>" id="score-badge">
+                <?= $score ?> / 100
+            </span>
+            <?php endif; ?>
+        </h1>
+        <?php if (!empty($scoreBreakdown) && $contact['engagement_score'] !== null): ?>
+        <div id="score-breakdown" style="display:none;margin-top:.5rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:.375rem;padding:.75rem;font-size:.8rem;max-width:340px">
+            <strong style="display:block;margin-bottom:.4rem">Score breakdown</strong>
+            <?php
+            $labels = [
+                'donation_recency'    => 'Donation recency',
+                'donation_frequency'  => 'Donation frequency',
+                'donation_cumulative' => 'Cumulative giving',
+                'event_attendance'    => 'Event attendance',
+                'volunteer_hours'     => 'Volunteer hours',
+                'email_engagement'    => 'Email engagement',
+            ];
+            foreach ($scoreBreakdown as $key => $comp):
+                if (!$comp['active']) continue;
+            ?>
+            <div style="display:flex;justify-content:space-between;padding:.2rem 0;border-bottom:1px solid #f1f5f9">
+                <span style="color:#475569"><?= $labels[$key] ?? $key ?></span>
+                <span style="font-weight:600"><?= $comp['contribution'] ?> / <?= $comp['weight'] ?></span>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <script>
+        document.getElementById('score-badge')?.addEventListener('click', function() {
+            var bd = document.getElementById('score-breakdown');
+            if (bd) bd.style.display = bd.style.display === 'none' ? 'block' : 'none';
+        });
+        </script>
+        <?php endif; ?>
+    </div>
     <div class="d-flex gap-1">
         <?php if (Auth::hasRole('super_admin','admin','staff')): ?>
         <a href="<?= APP_URL ?>/crm/<?= $contact['id'] ?>/edit" class="btn btn-secondary btn-sm">Edit</a>

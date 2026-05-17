@@ -10,6 +10,7 @@ if (php_sapi_name() !== 'cli') {
 define('ROOT', dirname(__DIR__));
 require ROOT . '/config/config.php';
 require ROOT . '/core/Database.php';
+require ROOT . '/core/EngagementScore.php';
 
 $db  = Database::getInstance();
 $now = date('Y-m-d');
@@ -119,5 +120,9 @@ foreach ($newDonations as $d) {
     }
 }
 $log('Recurring donations generated: ' . count($newDonations));
+
+// --- 7. Engagement score bulk recalculation ---
+$count = EngagementScore::refreshAll($db);
+$log("Engagement scores recalculated: $count contacts.");
 
 $log('Daily cron complete.');

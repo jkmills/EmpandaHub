@@ -11,6 +11,17 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.2.0] — 2026-05-17
+
+### Added
+- **Donor Engagement Score**: contacts are automatically scored 0–100 based on donation recency, frequency, cumulative giving, event attendance, volunteer hours, and email engagement. Scores refresh daily via cron and on contact view when stale (>24 h). Badge displayed on contact card; sortable column in CRM list; at-risk donor widget on Dashboard shows lapsed donors ordered by score.
+- **Document Library**: file storage with role-based visibility levels (All Staff / Staff Only / Admin Only / Super Admin Only), category organization, version history, cryptographic public share links with optional expiry and access logging. Files stored outside webroot (`storage/documents/`); executable file types blocked at upload.
+
+### Changed
+- CRM contacts list now supports sorting by engagement score (ascending or descending).
+
+---
+
 ## [1.1.2] — 2026-05-17
 
 ### Added
