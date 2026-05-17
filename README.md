@@ -142,15 +142,13 @@ See **[docs/architecture.md](docs/architecture.md)** for the technical reference
 
 Feature gaps identified from competitive analysis of Bloomerang, NeonCRM, Little Green Light, Virtuous, DonorPerfect, Raiser's Edge NXT, Wild Apricot, Bonterra Apricot, MemberClicks, and Salesforce Nonprofit:
 
-**Phase 1** — [#1 Email Marketing](../../issues/1) · [#2 SMS](../../issues/2) · [#3 Engagement Score](../../issues/3)
+**Phase 1** — [#1 Email Marketing](../../issues/1) · [#2 SMS](../../issues/2) · [#3 Engagement Score](../../issues/3) · [#15 Stripe Payments](../../issues/15)
 
-**Phase 2** — [#4 Peer-to-Peer Fundraising](../../issues/4) · [#5 Tribute Gifts](../../issues/5) · [#6 Matching Gifts](../../issues/6) · [#7 Auctions](../../issues/7)
+**Phase 2** — [#4 Peer-to-Peer Fundraising](../../issues/4) · [#5 Tribute Gifts](../../issues/5) · [#6 Matching Gifts](../../issues/6) · [#7 Auctions](../../issues/7) · [#14 Document Library](../../issues/14) · [#16 GiveLively Sync](../../issues/16)
 
 **Phase 3** — [#8 Member Self-Service Portal](../../issues/8) · [#9 Planned Giving](../../issues/9) · [#10 Wealth Screening](../../issues/10)
 
-**Phase 4** — [#11 Case Management](../../issues/11) · [#12 Impact Reporting](../../issues/12) · [#13 Learning Management](../../issues/13)
-
-**Other** — [#14 Document Library (RBAC + public links)](../../issues/14)
+**Phase 4** — [#11 Case Management](../../issues/11) · [#12 Impact Reporting](../../issues/12) · [#13 Learning Management](../../issues/13) · [#17 Clynk Integration](../../issues/17)
 
 ---
 
