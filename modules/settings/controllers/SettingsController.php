@@ -211,20 +211,27 @@ class SettingsController extends Controller
             $dbVer    = Updater::installedDbVersion();
             $pending  = Updater::pendingMigrations();
             $this->renderLayout('modules/settings/views/updates.php', [
-                'pageTitle'       => 'Updates',
-                'release'         => $release,
-                'currentVersion'  => $current,
-                'dbVersion'       => $dbVer,
-                'pending'         => $pending,
-                'hasUpdate'       => true,
+                'pageTitle'        => 'Updates',
+                'release'          => $release,
+                'currentVersion'   => $current,
+                'dbVersion'        => $dbVer,
+                'pending'          => $pending,
+                'hasUpdate'        => true,
                 'migrationResults' => [],
-                'upgradeResults'  => [],
-                'preflightErrors' => $preflight,
+                'upgradeResults'   => [],
+                'preflightErrors'  => $preflight,
             ]);
             return;
         }
 
-        $upgradeResults = Updater::performUpgrade($downloadUrl, $release['version']);
+        // Auto-backup all modules before touching any files
+        $backupFile   = null;
+        $backupResult = $this->createPreUpgradeBackup();
+        if ($backupResult['file']) {
+            $backupFile = $backupResult['file'];
+        }
+
+        $upgradeResults = array_merge([$backupResult['entry']], Updater::performUpgrade($downloadUrl, $release['version']));
 
         $anyError = (bool)array_filter($upgradeResults, fn($r) => $r['status'] === 'error');
         if (!$anyError) {
@@ -245,7 +252,82 @@ class SettingsController extends Controller
             'hasUpdate'        => $hasUpdate2,
             'migrationResults' => [],
             'upgradeResults'   => $upgradeResults,
+            'backupFile'       => $backupFile,
         ]);
+    }
+
+    private function createPreUpgradeBackup(): array
+    {
+        $backupDir = ROOT . '/config/backups';
+        if (!is_dir($backupDir)) {
+            @mkdir($backupDir, 0755, true);
+        }
+
+        try {
+            $orgId   = Auth::orgId();
+            $db      = Database::getInstance();
+            $stmt    = $db->prepare('SELECT name FROM organizations WHERE id = ?');
+            $stmt->execute([$orgId]);
+            $orgName = $stmt->fetchColumn() ?: 'Unknown';
+
+            $modules = array_keys(DataModel::MODULE_TABLES);
+            $model   = new DataModel();
+            $data    = $model->backup($orgId, $modules);
+
+            $payload = [
+                'meta' => [
+                    'app'         => 'EmpandaHub',
+                    'version'     => Updater::currentVersion(),
+                    'org_name'    => $orgName,
+                    'exported_at' => date('c'),
+                    'modules'     => $modules,
+                    'note'        => 'Automatic pre-upgrade backup',
+                ],
+                'data' => $data,
+            ];
+
+            $filename = 'pre-upgrade-' . date('Y-m-d-His') . '.json';
+            $path     = $backupDir . '/' . $filename;
+
+            if (@file_put_contents($path, json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) === false) {
+                throw new \RuntimeException('Could not write backup file to config/backups/.');
+            }
+
+            AuditLog::record('data.backup', 'org', $orgId, 'pre-upgrade automatic backup');
+
+            return [
+                'file'  => $filename,
+                'entry' => ['status' => 'ok', 'step' => 'backup', 'message' => 'Pre-upgrade backup saved.', 'file' => $filename],
+            ];
+        } catch (\Throwable $e) {
+            return [
+                'file'  => null,
+                'entry' => ['status' => 'warn', 'step' => 'backup', 'message' => 'Backup skipped: ' . $e->getMessage()],
+            ];
+        }
+    }
+
+    public function downloadUpgradeBackup(array $p): void
+    {
+        Auth::requireRole('super_admin');
+
+        $file = basename($_GET['file'] ?? '');
+        if (!preg_match('/^pre-upgrade-[\d-]+\.json$/', $file)) {
+            http_response_code(400);
+            exit('Invalid filename.');
+        }
+
+        $path = ROOT . '/config/backups/' . $file;
+        if (!file_exists($path)) {
+            http_response_code(404);
+            exit('Backup file not found.');
+        }
+
+        header('Content-Type: application/json; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $file . '"');
+        header('Content-Length: ' . filesize($path));
+        readfile($path);
+        exit;
     }
 
     public function clearUpgradeLock(array $p): void

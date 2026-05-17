@@ -10,6 +10,7 @@
 $hasUpdate       = isset($release) && $release && version_compare($release['version'] ?? '0', $currentVersion, '>');
 $upgradeResults  = $upgradeResults ?? [];
 $preflightErrors = $preflightErrors ?? [];
+$backupFile      = $backupFile ?? null;
 $canUpgrade      = $hasUpdate && !empty($release['download_url']);
 $upgradeError    = (bool)array_filter($upgradeResults, fn($r) => $r['status'] === 'error');
 $upgradeOk       = !empty($upgradeResults) && !$upgradeError;
@@ -37,12 +38,17 @@ $upgradeOk       = !empty($upgradeResults) && !$upgradeError;
     <div class="card-body">
         <ul style="list-style:none;padding:0;margin:0">
         <?php foreach ($upgradeResults as $r): ?>
-            <li style="padding:.4rem .5rem;border-radius:.3rem;margin:.2rem 0;font-size:.875rem;background:<?= $r['status']==='ok'?'#dcfce7':'#fee2e2' ?>;color:<?= $r['status']==='ok'?'#166534':'#991b1b' ?>">
-                <?php
-                $icon = $r['status'] === 'ok' ? '&#10003;' : '&#10007;';
-                $step = match($r['step'] ?? '') { 'files' => '[files]', 'migration' => '[db]', default => '' };
-                ?>
+            <?php
+            $bg   = match($r['status']) { 'ok' => '#dcfce7', 'warn' => '#fef9c3', default => '#fee2e2' };
+            $fg   = match($r['status']) { 'ok' => '#166534', 'warn' => '#713f12', default => '#991b1b' };
+            $icon = match($r['status']) { 'ok' => '&#10003;', 'warn' => '&#9888;', default => '&#10007;' };
+            $step = match($r['step'] ?? '') { 'backup' => '[backup]', 'files' => '[files]', 'migration' => '[db]', default => '' };
+            ?>
+            <li style="padding:.4rem .5rem;border-radius:.3rem;margin:.2rem 0;font-size:.875rem;background:<?= $bg ?>;color:<?= $fg ?>">
                 <?= $icon ?> <span style="font-family:monospace;opacity:.7"><?= $step ?></span> <?= htmlspecialchars($r['message'], ENT_QUOTES, 'UTF-8') ?>
+                <?php if (($r['step'] ?? '') === 'backup' && $r['status'] === 'ok' && $backupFile): ?>
+                &nbsp;<a href="<?= APP_URL ?>/settings/updates/upgrade/backup?file=<?= urlencode($backupFile) ?>" style="color:<?= $fg ?>;font-weight:600">Download backup &darr;</a>
+                <?php endif; ?>
             </li>
         <?php endforeach; ?>
         </ul>
@@ -161,13 +167,13 @@ $upgradeOk       = !empty($upgradeResults) && !$upgradeError;
             The in-app upgrader will download the release ZIP from GitHub, replace application files (preserving <code>config/config.php</code> and <code>public/uploads/</code>), and apply any pending database migrations automatically.
         </p>
         <div style="background:#f8fafc;border-radius:.375rem;padding:.75rem 1rem;margin-bottom:1rem;font-size:.8rem;color:#475569">
-            <strong>Before you proceed:</strong>
+            <strong>What will happen:</strong>
             <ul style="margin:.5rem 0 0;padding-left:1.25rem;line-height:1.8">
-                <li>Back up your database: <code>mysqldump -u USER -p DBNAME &gt; backup.sql</code>
-                    &nbsp;<a href="<?= APP_URL ?>/data" style="color:var(--brand)">or use Data Management &rarr;</a></li>
-                <li>Ensure your server can make outbound HTTPS requests to GitHub.</li>
-                <li>Do not close this tab or navigate away during the upgrade.</li>
+                <li>A full data backup is created automatically and available to download from the results page.</li>
+                <li>Application files are replaced from the release ZIP (<code>config/config.php</code> and <code>public/uploads/</code> are preserved).</li>
+                <li>Any pending database migrations are applied.</li>
             </ul>
+            <p style="margin:.75rem 0 0;color:#b45309"><strong>Note:</strong> Ensure your server can reach GitHub over HTTPS. Do not close this tab during the upgrade.</p>
         </div>
         <form method="post" action="<?= APP_URL ?>/settings/updates/upgrade"
               onsubmit="this.querySelector('button[type=submit]').disabled=true;this.querySelector('button[type=submit]').textContent='Upgrading…';return true;">
@@ -204,23 +210,24 @@ $upgradeOk       = !empty($upgradeResults) && !$upgradeError;
 <?php endif; ?>
 
 <div class="card">
-    <div class="card-header"><h3>Upgrade Instructions</h3></div>
     <div class="card-body" style="font-size:.875rem;color:#475569">
-        <ol style="margin:0;padding-left:1.25rem;line-height:1.8">
-            <li>Download the latest release ZIP from <a href="https://github.com/jkmills/EmpandaHub/releases" target="_blank" rel="noopener">GitHub Releases</a>.</li>
-            <li>Back up your database: <code>mysqldump -u USER -p DBNAME &gt; backup.sql</code></li>
-            <li>Replace all application files (do <strong>not</strong> overwrite <code>config/config.php</code> or <code>public/uploads/</code>).</li>
-            <li>Run <code>composer install --no-dev</code> in the app root.</li>
-            <li>Return here and click <strong>Run Migrations</strong> if pending migrations appear above.</li>
-            <li>Alternatively: <code>php install/migrate.php</code> from the command line.</li>
-        </ol>
-
-        <div style="margin-top:1rem;padding:.75rem;background:#f8fafc;border-radius:.375rem">
+        <div style="margin-bottom:1rem;padding:.75rem;background:#f8fafc;border-radius:.375rem">
             <strong>Force update check:</strong>
             <form method="post" action="<?= APP_URL ?>/settings/updates/check" style="display:inline;margin-left:.5rem">
                 <?= Csrf::field() ?>
                 <button type="submit" style="background:none;border:none;color:var(--brand);cursor:pointer;font-size:.875rem;padding:0;text-decoration:underline">Check for updates now</button>
             </form>
         </div>
+
+        <details>
+            <summary style="cursor:pointer;font-weight:600;color:#475569;user-select:none">Manual upgrade (use if in-app upgrade fails)</summary>
+            <ol style="margin:.75rem 0 0;padding-left:1.25rem;line-height:1.8">
+                <li>Download the release ZIP from <a href="https://github.com/jkmills/EmpandaHub/releases" target="_blank" rel="noopener">GitHub Releases</a>.</li>
+                <li>Back up your database: <code>mysqldump -u USER -p DBNAME &gt; backup.sql</code></li>
+                <li>Replace all application files (do <strong>not</strong> overwrite <code>config/config.php</code> or <code>public/uploads/</code>).</li>
+                <li>Composer dependencies are bundled in the ZIP — no separate install needed.</li>
+                <li>Return here and click <strong>Run Migrations</strong> if pending migrations appear above.</li>
+            </ol>
+        </details>
     </div>
 </div>
