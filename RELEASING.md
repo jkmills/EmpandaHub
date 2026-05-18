@@ -86,14 +86,3 @@ Super admins see an "Update available" banner in the sidebar whenever a newer Gi
 
 Pre-flight checks run before the upgrade begins and surface any blockers (missing extension, unwritable directories, stale lock file).
 
----
-
-## Softaculous
-
-See **[softaculous/README.md](softaculous/README.md)** for full instructions covering:
-- Adding EmpandaHub as a custom WHM/cPanel Softaculous script
-- Submitting to the public Softaculous library
-- The end-user install experience
-- How `install_adapter.php` works and how to test it
-
-When cutting a release, update `<version>` and `<release_date>` in `softaculous/softaculous.xml` to match the new `VERSION` file before tagging.

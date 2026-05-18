@@ -33,8 +33,22 @@ function fmtBytes(int $b): string {
 
 <div>
 
+<?php if (DocumentController::isPreviewable($doc['mime_type'])): ?>
+<div class="card" style="padding:0;overflow:hidden">
+    <?php if (str_starts_with($doc['mime_type'], 'image/')): ?>
+    <img src="<?= APP_URL ?>/documents/<?= $doc['id'] ?>/preview"
+         alt="<?= htmlspecialchars($doc['title'],ENT_QUOTES,'UTF-8') ?>"
+         style="display:block;max-width:100%;height:auto">
+    <?php else: ?>
+    <iframe src="<?= APP_URL ?>/documents/<?= $doc['id'] ?>/preview"
+            style="display:block;width:100%;height:72vh;border:0"
+            title="<?= htmlspecialchars($doc['title'],ENT_QUOTES,'UTF-8') ?>"></iframe>
+    <?php endif; ?>
+</div>
+<?php endif; ?>
+
 <?php if ($doc['description']): ?>
-<div class="card">
+<div class="card" style="margin-top:1rem">
     <div class="card-header"><h3>Description</h3></div>
     <p style="margin:0;white-space:pre-wrap"><?= htmlspecialchars($doc['description'],ENT_QUOTES,'UTF-8') ?></p>
 </div>

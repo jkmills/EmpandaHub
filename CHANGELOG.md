@@ -11,6 +11,23 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.2.6] — 2026-05-18
+
+### Added
+- **User ↔ member link**: `users` table gains a `contact_id` FK to `contacts`. Migration backfills the existing user by creating a contact record from their name/email. New users created via the "Promote Member to User" flow are automatically linked.
+- **Promote Member to User**: Settings now shows a "Promote Member to User" form that lists active members who don't yet have a login. Selecting a member, role, and password creates a user account linked to their contact record. The existing "Add User" form remains for staff/admin accounts not requiring membership.
+- **Users table: Member column**: the user list in Settings shows a "Member" column with a link to the contact record for linked users.
+- **Document preview**: the document detail page now renders an inline preview for browser-native formats (PDF, PNG, JPEG, GIF, WebP, SVG) above the description. Non-previewable formats continue to download. Preview is served through the authenticated `/documents/:id/preview` endpoint.
+
+### Changed
+- Release ZIP no longer includes `softaculous/`, `EmpandaHub.goal.md`, `RELEASING.md`, `docs/architecture.md`, `storage/`, or `.claude/` — none are needed by end users.
+- `cron/daily.php` now covers all nightly tasks (membership transitions, dues reminders, grant alerts, engagement scores); documentation updated accordingly.
+
+### Removed
+- `softaculous/` directory removed. Softaculous integration is not being pursued; the ZIP + web installer is the sole supported install path.
+
+---
+
 ## [1.2.5] — 2026-05-18
 
 ### Fixed
@@ -113,7 +130,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - CSRF protection on all forms
 - PDF receipt generation via TCPDF
 
-[Unreleased]: https://github.com/jkmills/EmpandaHub/compare/v1.2.5...HEAD
+[Unreleased]: https://github.com/jkmills/EmpandaHub/compare/v1.2.6...HEAD
+[1.2.6]: https://github.com/jkmills/EmpandaHub/compare/v1.2.5...v1.2.6
 [1.2.5]: https://github.com/jkmills/EmpandaHub/compare/v1.2.4...v1.2.5
 [1.2.4]: https://github.com/jkmills/EmpandaHub/compare/v1.2.3...v1.2.4
 [1.2.3]: https://github.com/jkmills/EmpandaHub/compare/v1.2.2...v1.2.3

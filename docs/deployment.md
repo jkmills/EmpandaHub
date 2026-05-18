@@ -141,11 +141,9 @@ sudo crontab -u www-data -e
 Add (adjust paths and frequency as needed):
 
 ```cron
-# Engagement score recalculation — nightly at 2am
-0 2 * * * php /var/www/empandahub/cron/engagement_score.php >> /var/log/empandahub_cron.log 2>&1
+# Nightly tasks: membership transitions, dues reminders, grant alerts, engagement scores
+0 2 * * * php /var/www/empandahub/cron/daily.php >> /var/log/empandahub_cron.log 2>&1
 ```
-
-> The engagement score cron script will be added when Issue #3 (Donor Engagement Score) is implemented.
 
 ---
 

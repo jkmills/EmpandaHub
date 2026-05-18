@@ -42,16 +42,21 @@ jobs:
           zip -r "$ARCHIVE" . \
             --exclude "*.git*" \
             --exclude "*.github*" \
+            --exclude ".claude/*" \
             --exclude "config/config.php" \
             --exclude "config/update_cache.json" \
             --exclude "public/uploads/*" \
+            --exclude "storage/*" \
             --exclude "tests/*" \
             --exclude "docker/*" \
             --exclude "docker-compose*.yml" \
             --exclude "node_modules/*" \
             --exclude "package*.json" \
             --exclude "*.playwright*" \
-            --exclude "softaculous/empandahub-*.zip"
+            --exclude "softaculous/*" \
+            --exclude "EmpandaHub.goal.md" \
+            --exclude "RELEASING.md" \
+            --exclude "docs/architecture.md"
 
           echo "ARCHIVE=${ARCHIVE}" >> $GITHUB_OUTPUT
         id: build

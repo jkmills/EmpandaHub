@@ -11,9 +11,75 @@ class SettingsController extends Controller
     public function index(array $p): void
     {
         Auth::requireRole('super_admin', 'admin');
-        $users = Database::getInstance()->prepare('SELECT * FROM users WHERE org_id = ? ORDER BY name');
-        $users->execute([Auth::orgId()]);
-        $this->layout('modules/settings/views/index.php', ['pageTitle' => 'Settings', 'users' => $users->fetchAll()]);
+        $db    = Database::getInstance();
+        $orgId = Auth::orgId();
+
+        $users = $db->prepare('SELECT * FROM users WHERE org_id = ? ORDER BY name');
+        $users->execute([$orgId]);
+
+        // Active members without a user account (available to promote)
+        $promotable = $db->prepare(
+            'SELECT c.id, c.first_name, c.last_name, c.email, t.name AS tier_name
+             FROM contacts c
+             JOIN memberships m ON m.contact_id = c.id AND m.org_id = c.org_id
+             JOIN membership_tiers t ON t.id = m.tier_id
+             WHERE c.org_id = ?
+               AND m.status IN ("active","grace","lifetime")
+               AND c.email IS NOT NULL AND c.email != ""
+               AND NOT EXISTS (SELECT 1 FROM users u WHERE u.org_id = c.org_id AND u.contact_id = c.id)
+             ORDER BY c.last_name, c.first_name'
+        );
+        $promotable->execute([$orgId]);
+
+        $this->layout('modules/settings/views/index.php', [
+            'pageTitle'  => 'Settings',
+            'users'      => $users->fetchAll(),
+            'promotable' => $promotable->fetchAll(),
+        ]);
+    }
+
+    public function promoteToUser(array $p): void
+    {
+        Auth::requireRole('super_admin', 'admin');
+        $this->requirePost();
+        $db    = Database::getInstance();
+        $orgId = Auth::orgId();
+
+        $contactId = (int)($_POST['contact_id'] ?? 0);
+        $role      = $_POST['role']     ?? 'readonly';
+        $pass      = $_POST['password'] ?? '';
+
+        if (!$contactId) { Flash::error('Please select a member.'); $this->redirect('/settings'); }
+        if (strlen($pass) < 8) { Flash::error('Password must be 8+ characters.'); $this->redirect('/settings'); }
+
+        // Verify contact is an active member of this org and has an email
+        $contact = $db->prepare(
+            'SELECT c.first_name, c.last_name, c.email
+             FROM contacts c
+             JOIN memberships m ON m.contact_id = c.id AND m.org_id = c.org_id
+             WHERE c.id = ? AND c.org_id = ?
+               AND m.status IN ("active","grace","lifetime")
+               AND c.email IS NOT NULL AND c.email != ""
+             LIMIT 1'
+        );
+        $contact->execute([$contactId, $orgId]);
+        $member = $contact->fetch();
+
+        if (!$member) { Flash::error('Member not found or does not have an active membership.'); $this->redirect('/settings'); }
+
+        $name = trim($member['first_name'] . ' ' . $member['last_name']);
+        $hash = password_hash($pass, PASSWORD_BCRYPT);
+
+        try {
+            $db->prepare(
+                'INSERT INTO users (org_id, contact_id, name, email, password, role) VALUES (?, ?, ?, ?, ?, ?)'
+            )->execute([$orgId, $contactId, $name, $member['email'], $hash, $role]);
+            AuditLog::record('user.create', 'user', (int)$db->lastInsertId());
+            Flash::success(htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . ' has been given system access.');
+        } catch (PDOException $e) {
+            Flash::error('That email already has a user account.');
+        }
+        $this->redirect('/settings');
     }
 
     public function updateOrg(array $p): void

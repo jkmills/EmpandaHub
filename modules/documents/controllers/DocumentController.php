@@ -198,6 +198,16 @@ class DocumentController extends Controller
         $this->redirect('/documents/' . $params['id']);
     }
 
+    private const PREVIEWABLE_MIMES = [
+        'application/pdf',
+        'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml',
+    ];
+
+    public static function isPreviewable(string $mimeType): bool
+    {
+        return in_array($mimeType, self::PREVIEWABLE_MIMES, true);
+    }
+
     public function download(array $params): void
     {
         Auth::require();
@@ -206,6 +216,18 @@ class DocumentController extends Controller
         if (!$doc) $this->abort(404);
 
         $this->serveFile($doc['file_path'], $doc['filename'], $doc['mime_type']);
+    }
+
+    public function preview(array $params): void
+    {
+        Auth::require();
+        $orgId = Auth::orgId();
+        $doc   = $this->model->findDoc((int)$params['id'], $orgId);
+        if (!$doc) $this->abort(404);
+
+        if (!self::isPreviewable($doc['mime_type'])) $this->abort(415);
+
+        $this->serveFile($doc['file_path'], $doc['filename'], $doc['mime_type'], inline: true);
     }
 
     public function publicDownload(array $params): void
@@ -300,13 +322,14 @@ class DocumentController extends Controller
         ], []];
     }
 
-    private function serveFile(string $relPath, string $filename, string $mimeType): void
+    private function serveFile(string $relPath, string $filename, string $mimeType, bool $inline = false): void
     {
         $absPath = ROOT . '/' . ltrim($relPath, '/');
         if (!is_file($absPath)) $this->abort(404);
 
+        $disposition = $inline ? 'inline' : 'attachment';
         header('Content-Type: ' . $mimeType);
-        header('Content-Disposition: attachment; filename="' . addslashes($filename) . '"');
+        header('Content-Disposition: ' . $disposition . '; filename="' . addslashes($filename) . '"');
         header('Content-Length: ' . filesize($absPath));
         header('X-Content-Type-Options: nosniff');
         readfile($absPath);

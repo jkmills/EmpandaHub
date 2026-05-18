@@ -5,3 +5,4 @@ vendor/
 *.env
 .env
 uploads/
+.claude/

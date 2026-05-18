@@ -78,7 +78,7 @@
 <div class="card">
     <h3 style="margin-top:0">Users</h3>
     <div class="table-wrap mb-2"><table>
-    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Active</th><th>Actions</th></tr></thead>
+    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Member</th><th>Active</th><th>Actions</th></tr></thead>
     <tbody>
     <?php foreach ($users as $u): ?>
     <tr>
@@ -95,6 +95,13 @@
             <?= htmlspecialchars($u['role'], ENT_QUOTES,'UTF-8') ?>
             <?php endif; ?>
         </td>
+        <td>
+            <?php if ($u['contact_id']): ?>
+            <a href="<?= APP_URL ?>/crm/<?= (int)$u['contact_id'] ?>" style="font-size:.8rem">View</a>
+            <?php else: ?>
+            <span style="color:var(--gray-400);font-size:.8rem">—</span>
+            <?php endif; ?>
+        </td>
         <td><span class="badge <?= $u['is_active'] ? 'badge-success' : 'badge-muted' ?>"><?= $u['is_active'] ? 'Yes' : 'No' ?></span></td>
         <td><?php if ($u['is_active'] && $u['id'] != Auth::user()['id']): ?>
             <form method="post" action="<?= APP_URL ?>/settings/users/<?= $u['id'] ?>/deactivate"><?= Csrf::field() ?><button class="btn btn-danger btn-sm" data-confirm="Deactivate this user?">Deactivate</button></form>
@@ -103,7 +110,31 @@
     <?php endforeach; ?>
     </tbody></table></div>
 
-    <h4 style="margin:.5rem 0">Add User</h4>
+    <?php if (!empty($promotable)): ?>
+    <h4 style="margin:.75rem 0 .4rem">Promote Member to User</h4>
+    <form method="post" action="<?= APP_URL ?>/settings/users/promote">
+        <?= Csrf::field() ?>
+        <div class="form-group">
+            <label>Member *</label>
+            <select name="contact_id" required style="width:100%">
+                <option value="">— select a member —</option>
+                <?php foreach ($promotable as $m): ?>
+                <option value="<?= (int)$m['id'] ?>">
+                    <?= htmlspecialchars($m['first_name'] . ' ' . $m['last_name'], ENT_QUOTES,'UTF-8') ?>
+                    (<?= htmlspecialchars($m['email'], ENT_QUOTES,'UTF-8') ?>)
+                    — <?= htmlspecialchars($m['tier_name'], ENT_QUOTES,'UTF-8') ?>
+                </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="form-group"><label>Role</label><select name="role"><?php foreach (['admin','staff','volunteer','readonly'] as $r): ?><option value="<?= $r ?>"><?= $r ?></option><?php endforeach; ?></select></div>
+        <div class="form-group"><label>Password *</label><input type="password" name="password" required minlength="8"></div>
+        <button type="submit" class="btn btn-primary btn-sm">Grant Access</button>
+    </form>
+    <hr style="margin:1rem 0 .75rem">
+    <?php endif; ?>
+
+    <h4 style="margin:.5rem 0">Add User (no membership required)</h4>
     <form method="post" action="<?= APP_URL ?>/settings/users/invite">
         <?= Csrf::field() ?>
         <div class="form-group"><label>Name *</label><input name="name" required></div>

@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS organizations (
 CREATE TABLE IF NOT EXISTS users (
   id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   org_id       INT UNSIGNED NOT NULL,
+  contact_id   INT UNSIGNED DEFAULT NULL,
   name         VARCHAR(255) NOT NULL,
   email        VARCHAR(255) NOT NULL,
   password     VARCHAR(255) NOT NULL,
@@ -26,7 +27,9 @@ CREATE TABLE IF NOT EXISTS users (
   created_at   DATETIME     DEFAULT CURRENT_TIMESTAMP,
   updated_at   DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_user_email (org_id, email),
-  CONSTRAINT fk_users_org FOREIGN KEY (org_id) REFERENCES organizations(id)
+  KEY idx_users_contact (contact_id),
+  CONSTRAINT fk_users_org     FOREIGN KEY (org_id)     REFERENCES organizations(id),
+  CONSTRAINT fk_users_contact FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS contacts (

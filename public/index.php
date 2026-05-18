@@ -177,6 +177,7 @@ $router->module('documents', function ($r) {
     $r->post('/documents/:id/share',                           'DocumentController', 'share');
     $r->post('/documents/:id/share/:linkId/revoke',            'DocumentController', 'revokeShareLink');
     $r->get('/documents/:id/download',                         'DocumentController', 'download');
+    $r->get('/documents/:id/preview',                          'DocumentController', 'preview');
     $r->post('/documents/:id/delete',                          'DocumentController', 'delete');
 });
 
@@ -199,6 +200,7 @@ $router->post('/data/restore',                    'DataController', 'restore');
 $router->get('/settings',                         'SettingsController', 'index');
 $router->post('/settings/org',                    'SettingsController', 'updateOrg');
 $router->post('/settings/users/invite',           'SettingsController', 'inviteUser');
+$router->post('/settings/users/promote',          'SettingsController', 'promoteToUser');
 $router->post('/settings/users/:id/deactivate',   'SettingsController', 'deactivateUser');
 $router->post('/settings/users/:id/role',         'SettingsController', 'updateRole');
 $router->get('/settings/export',                  'SettingsController', 'export');
