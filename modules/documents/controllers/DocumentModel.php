@@ -171,10 +171,4 @@ class DocumentModel extends Model
             ->execute([$id, $orgId]);
     }
 
-    private function queryOne(string $sql, array $params = []): mixed
-    {
-        $stmt = Database::getInstance()->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetch();
-    }
 }

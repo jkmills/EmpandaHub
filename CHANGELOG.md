@@ -11,6 +11,13 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.2.1] — 2026-05-18
+
+### Fixed
+- Fatal error on every page load caused by `DocumentModel::queryOne()` redeclaring the base `Model::queryOne()` as `private` (PHP requires the override be `protected` or weaker). Removed the duplicate — the inherited method is identical.
+
+---
+
 ## [1.2.0] — 2026-05-17
 
 ### Added
