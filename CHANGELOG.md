@@ -11,6 +11,15 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.2.5] — 2026-05-18
+
+### Fixed
+- Data backup/restore is now forward- and backward-compatible across schema versions. `restoreTable()` fetches live column names via `SHOW COLUMNS` and strips any row keys not present in the current schema before inserting, so a backup taken on an older version can be cleanly restored to a newer install (and vice versa) without crashing on unknown or removed columns.
+- Document Library tables (`doc_categories`, `documents`, `document_share_links`) are now included in data backups and restores. Previously they were absent from `MODULE_TABLES`.
+- `FK_MAP` and `SELF_REF` updated for document tables: `documents.category_id → doc_categories`, `document_share_links.document_id → documents`, `doc_categories.parent_id` self-referential FK all handled correctly during restore.
+
+---
+
 ## [1.2.4] — 2026-05-18
 
 ### Fixed
@@ -104,7 +113,13 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - CSRF protection on all forms
 - PDF receipt generation via TCPDF
 
-[Unreleased]: https://github.com/jkmills/EmpandaHub/compare/v1.1.2...HEAD
+[Unreleased]: https://github.com/jkmills/EmpandaHub/compare/v1.2.5...HEAD
+[1.2.5]: https://github.com/jkmills/EmpandaHub/compare/v1.2.4...v1.2.5
+[1.2.4]: https://github.com/jkmills/EmpandaHub/compare/v1.2.3...v1.2.4
+[1.2.3]: https://github.com/jkmills/EmpandaHub/compare/v1.2.2...v1.2.3
+[1.2.2]: https://github.com/jkmills/EmpandaHub/compare/v1.2.1...v1.2.2
+[1.2.1]: https://github.com/jkmills/EmpandaHub/compare/v1.2.0...v1.2.1
+[1.2.0]: https://github.com/jkmills/EmpandaHub/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/jkmills/EmpandaHub/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/jkmills/EmpandaHub/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/jkmills/EmpandaHub/compare/v1.0.0...v1.1.0

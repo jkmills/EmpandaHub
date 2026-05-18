@@ -17,8 +17,8 @@
 
   <!-- Basic metadata -->
   <softname>EmpandaHub</softname>
-  <version>1.2.4</version>
-  <release_date>17 May 2026</release_date>
+  <version>1.2.5</version>
+  <release_date>18 May 2026</release_date>
   <category>Non Profit</category>
   <type>PHP</type>
   <dbtype>mysql</dbtype>

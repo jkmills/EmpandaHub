@@ -5,7 +5,9 @@ class DataModel extends Model
 {
     protected static string $table = 'contacts';
 
-    // Tables per module in dependency order (parents before children)
+    // Tables per module in dependency order (parents before children).
+    // Only include tables that have an org_id column (directly queryable by org).
+    // document_versions and document_link_access_log are excluded (no org_id; secondary data).
     public const MODULE_TABLES = [
         'crm'        => ['contacts', 'contact_tags', 'contact_notes', 'board_positions'],
         'membership' => ['membership_tiers', 'memberships', 'dues_payments', 'membership_history'],
@@ -13,6 +15,7 @@ class DataModel extends Model
         'volunteers' => ['volunteer_shifts', 'volunteers', 'volunteer_hours'],
         'events'     => ['events', 'event_registrations'],
         'grants'     => ['funders', 'grants', 'grant_reports'],
+        'documents'  => ['doc_categories', 'documents', 'document_share_links'],
     ];
 
     // Modules whose activity generates transaction rows
@@ -33,12 +36,15 @@ class DataModel extends Model
         'grants'              => ['funder_id' => 'funders'],
         'grant_reports'       => ['grant_id' => 'grants'],
         'transactions'        => ['contact_id' => 'contacts'],
+        'documents'           => ['category_id' => 'doc_categories', 'uploaded_by' => null],
+        'document_share_links'=> ['document_id' => 'documents', 'created_by' => null],
     ];
 
     // Self-referential FK columns: inserted NULL first, then patched
     private const SELF_REF = [
         'contacts'         => 'merged_into_id',
         'membership_tiers' => 'parent_tier_id',
+        'doc_categories'   => 'parent_id',
     ];
 
     public function backup(int $orgId, array $modules): array
@@ -166,10 +172,17 @@ class DataModel extends Model
         $inserted = 0;
         $errors   = [];
 
+        // Fetch live schema so rows from older backups don't fail on removed columns
+        // and rows from newer backups don't fail on columns that don't exist yet.
+        $schemaCols = $db->query("SHOW COLUMNS FROM `$table`")->fetchAll(\PDO::FETCH_COLUMN);
+
         foreach ($rows as $row) {
             $oldId = (int)$row['id'];
             unset($row['id'], $row['created_at'], $row['updated_at']);
             $row['org_id'] = $orgId;
+
+            // Strip columns absent from the current schema (forward/backward compat)
+            $row = array_intersect_key($row, array_flip($schemaCols));
 
             // Defer self-referential FK
             if ($selfRefCol) {
