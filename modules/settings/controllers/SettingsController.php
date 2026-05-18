@@ -198,8 +198,7 @@ class SettingsController extends Controller
             return;
         }
 
-        $downloadUrl = $release['download_url'] ?? null;
-        if (!$downloadUrl) {
+        if (!($release['download_url'] ?? null)) {
             Flash::error('No download URL available for this release. Download and apply manually.');
             $this->redirect('/settings/updates');
             return;
@@ -207,15 +206,12 @@ class SettingsController extends Controller
 
         $preflight = Updater::preflightCheck();
         if ($preflight) {
-            $release  = Updater::latestRelease();
-            $dbVer    = Updater::installedDbVersion();
-            $pending  = Updater::pendingMigrations();
             $this->renderLayout('modules/settings/views/updates.php', [
                 'pageTitle'        => 'Updates',
                 'release'          => $release,
                 'currentVersion'   => $current,
-                'dbVersion'        => $dbVer,
-                'pending'          => $pending,
+                'dbVersion'        => Updater::installedDbVersion(),
+                'pending'          => Updater::pendingMigrations(),
                 'hasUpdate'        => true,
                 'migrationResults' => [],
                 'upgradeResults'   => [],
@@ -224,21 +220,53 @@ class SettingsController extends Controller
             return;
         }
 
-        // Auto-backup all modules before touching any files
-        $backupFile   = null;
+        // Phase 1: create backup only — let user download before any files change
         $backupResult = $this->createPreUpgradeBackup();
-        if ($backupResult['file']) {
-            $backupFile = $backupResult['file'];
+
+        $this->renderLayout('modules/settings/views/updates.php', [
+            'pageTitle'        => 'Updates',
+            'release'          => $release,
+            'currentVersion'   => $current,
+            'dbVersion'        => Updater::installedDbVersion(),
+            'pending'          => Updater::pendingMigrations(),
+            'hasUpdate'        => true,
+            'migrationResults' => [],
+            'upgradeResults'   => [],
+            'backupReady'      => true,
+            'backupFile'       => $backupResult['file'],
+            'backupEntry'      => $backupResult['entry'],
+        ]);
+    }
+
+    public function upgradeApply(array $p): void
+    {
+        Auth::requireRole('super_admin');
+        $this->requirePost();
+
+        $current    = Updater::currentVersion();
+        $release    = Updater::latestRelease();
+        $backupFile = basename($_POST['backup_file'] ?? '');
+
+        if (!$release || !version_compare($release['version'] ?? '0', $current, '>')) {
+            Flash::error('No update available.');
+            $this->redirect('/settings/updates');
+            return;
         }
 
-        $upgradeResults = array_merge([$backupResult['entry']], Updater::performUpgrade($downloadUrl, $release['version']));
+        $downloadUrl = $release['download_url'] ?? null;
+        if (!$downloadUrl) {
+            Flash::error('No download URL available.');
+            $this->redirect('/settings/updates');
+            return;
+        }
+
+        $upgradeResults = Updater::performUpgrade($downloadUrl, $release['version']);
 
         $anyError = (bool)array_filter($upgradeResults, fn($r) => $r['status'] === 'error');
         if (!$anyError) {
             AuditLog::record('settings.upgrade', 'organization', Auth::orgId(), "from v{$current} to v{$release['version']}");
         }
 
-        // Re-read state after upgrade (VERSION file may have changed)
         $newVersion = Updater::currentVersion();
         $release2   = Updater::latestRelease();
         $hasUpdate2 = $release2 && version_compare($release2['version'] ?? '0', $newVersion, '>');
@@ -252,7 +280,7 @@ class SettingsController extends Controller
             'hasUpdate'        => $hasUpdate2,
             'migrationResults' => [],
             'upgradeResults'   => $upgradeResults,
-            'backupFile'       => $backupFile,
+            'backupFile'       => $backupFile ?: null,
         ]);
     }
 

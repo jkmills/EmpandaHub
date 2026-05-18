@@ -1,19 +1,12 @@
 <?php
-/** @var array|null $release */
-/** @var string $currentVersion */
-/** @var string $dbVersion */
-/** @var array $pending */
-/** @var array $migrationResults */
-/** @var array $upgradeResults */
-/** @var array $preflightErrors */
-/** @var bool $hasUpdate */
 $hasUpdate       = isset($release) && $release && version_compare($release['version'] ?? '0', $currentVersion, '>');
 $upgradeResults  = $upgradeResults ?? [];
 $preflightErrors = $preflightErrors ?? [];
 $backupFile      = $backupFile ?? null;
+$backupReady     = $backupReady ?? false;
+$backupEntry     = $backupEntry ?? null;
 $canUpgrade      = $hasUpdate && !empty($release['download_url']);
 $upgradeError    = (bool)array_filter($upgradeResults, fn($r) => $r['status'] === 'error');
-$upgradeOk       = !empty($upgradeResults) && !$upgradeError;
 ?>
 
 <div class="page-header">
@@ -22,6 +15,44 @@ $upgradeOk       = !empty($upgradeResults) && !$upgradeError;
         <p class="page-subtitle">Manage software version and database migrations</p>
     </div>
 </div>
+
+<?php if ($backupReady): ?>
+<div class="card" style="margin-bottom:1.5rem;border-color:#16a34a">
+    <div class="card-header" style="background:#f0fdf4">
+        <h3 style="color:#166534">Step 1 of 2: Backup Complete</h3>
+    </div>
+    <div class="card-body">
+        <?php if ($backupFile): ?>
+        <div style="padding:.6rem .75rem;border-radius:.375rem;background:#dcfce7;color:#166534;font-size:.875rem;margin-bottom:1rem">
+            &#10003; Pre-upgrade backup saved. &nbsp;
+            <a href="<?= APP_URL ?>/settings/updates/upgrade/backup?file=<?= urlencode($backupFile) ?>"
+               style="color:#166534;font-weight:700">Download backup &darr;</a>
+        </div>
+        <?php else: ?>
+        <?php $bmsg = htmlspecialchars($backupEntry['message'] ?? 'Backup could not be created.', ENT_QUOTES, 'UTF-8') ?>
+        <div style="padding:.6rem .75rem;border-radius:.375rem;background:#fef9c3;color:#713f12;font-size:.875rem;margin-bottom:1rem">
+            &#9888; <?= $bmsg ?> Proceeding without a backup is not recommended.
+        </div>
+        <?php endif; ?>
+        <p style="font-size:.875rem;color:#475569;margin-bottom:1rem">
+            <?= $backupFile ? 'Download your backup before continuing.' : 'No backup is available.' ?>
+            When ready, click <strong>Apply Upgrade</strong> to replace application files and run database migrations.
+            Do not close this tab.
+        </p>
+        <form method="post" action="<?= APP_URL ?>/settings/updates/upgrade/apply"
+              onsubmit="this.querySelector('button[type=submit]').disabled=true;this.querySelector('button[type=submit]').textContent='Upgrading…';return true;">
+            <?= Csrf::field() ?>
+            <?php if ($backupFile): ?>
+            <input type="hidden" name="backup_file" value="<?= htmlspecialchars($backupFile, ENT_QUOTES, 'UTF-8') ?>">
+            <?php endif; ?>
+            <button type="submit" class="btn" style="background:#2563eb">
+                Apply Upgrade to v<?= htmlspecialchars($release['version'] ?? '', ENT_QUOTES, 'UTF-8') ?>
+            </button>
+            <span style="font-size:.8rem;color:#64748b;margin-left:.75rem">This may take 30–60 seconds.</span>
+        </form>
+    </div>
+</div>
+<?php endif; ?>
 
 <?php if (!empty($upgradeResults)): ?>
 <?php if ($upgradeError): ?>
@@ -33,6 +64,13 @@ $upgradeOk       = !empty($upgradeResults) && !$upgradeError;
     <strong>Upgrade to v<?= htmlspecialchars($currentVersion, ENT_QUOTES, 'UTF-8') ?> complete!</strong>
 </div>
 <?php endif; ?>
+<?php if ($backupFile): ?>
+<div style="margin-bottom:1rem;padding:.6rem .75rem;border-radius:.375rem;background:#f0fdf4;border:1px solid #86efac;font-size:.875rem;color:#166534">
+    Pre-upgrade backup: &nbsp;
+    <a href="<?= APP_URL ?>/settings/updates/upgrade/backup?file=<?= urlencode($backupFile) ?>"
+       style="color:#166534;font-weight:700">Download backup &darr;</a>
+</div>
+<?php endif; ?>
 <div class="card" style="margin-bottom:1.5rem">
     <div class="card-header"><h3>Upgrade Results</h3></div>
     <div class="card-body">
@@ -42,13 +80,10 @@ $upgradeOk       = !empty($upgradeResults) && !$upgradeError;
             $bg   = match($r['status']) { 'ok' => '#dcfce7', 'warn' => '#fef9c3', default => '#fee2e2' };
             $fg   = match($r['status']) { 'ok' => '#166534', 'warn' => '#713f12', default => '#991b1b' };
             $icon = match($r['status']) { 'ok' => '&#10003;', 'warn' => '&#9888;', default => '&#10007;' };
-            $step = match($r['step'] ?? '') { 'backup' => '[backup]', 'files' => '[files]', 'migration' => '[db]', default => '' };
+            $step = match($r['step'] ?? '') { 'files' => '[files]', 'migration' => '[db]', default => '' };
             ?>
             <li style="padding:.4rem .5rem;border-radius:.3rem;margin:.2rem 0;font-size:.875rem;background:<?= $bg ?>;color:<?= $fg ?>">
                 <?= $icon ?> <span style="font-family:monospace;opacity:.7"><?= $step ?></span> <?= htmlspecialchars($r['message'], ENT_QUOTES, 'UTF-8') ?>
-                <?php if (($r['step'] ?? '') === 'backup' && $r['status'] === 'ok' && $backupFile): ?>
-                &nbsp;<a href="<?= APP_URL ?>/settings/updates/upgrade/backup?file=<?= urlencode($backupFile) ?>" style="color:<?= $fg ?>;font-weight:600">Download backup &darr;</a>
-                <?php endif; ?>
             </li>
         <?php endforeach; ?>
         </ul>
@@ -163,25 +198,21 @@ $upgradeOk       = !empty($upgradeResults) && !$upgradeError;
         <h3 style="color:#1e40af">Upgrade to v<?= htmlspecialchars($release['version'], ENT_QUOTES, 'UTF-8') ?></h3>
     </div>
     <div class="card-body">
-        <p style="font-size:.875rem;color:#475569;margin-bottom:1rem">
-            The in-app upgrader will download the release ZIP from GitHub, replace application files (preserving <code>config/config.php</code> and <code>public/uploads/</code>), and apply any pending database migrations automatically.
-        </p>
         <div style="background:#f8fafc;border-radius:.375rem;padding:.75rem 1rem;margin-bottom:1rem;font-size:.8rem;color:#475569">
-            <strong>What will happen:</strong>
-            <ul style="margin:.5rem 0 0;padding-left:1.25rem;line-height:1.8">
-                <li>A full data backup is created automatically and available to download from the results page.</li>
-                <li>Application files are replaced from the release ZIP (<code>config/config.php</code> and <code>public/uploads/</code> are preserved).</li>
-                <li>Any pending database migrations are applied.</li>
-            </ul>
+            <strong>Two-step process:</strong>
+            <ol style="margin:.5rem 0 0;padding-left:1.25rem;line-height:1.8">
+                <li><strong>Step 1</strong> — A full data backup is created. You download it before anything changes.</li>
+                <li><strong>Step 2</strong> — You confirm, then application files are replaced and database migrations are applied.</li>
+            </ol>
             <p style="margin:.75rem 0 0;color:#b45309"><strong>Note:</strong> Ensure your server can reach GitHub over HTTPS. Do not close this tab during the upgrade.</p>
         </div>
         <form method="post" action="<?= APP_URL ?>/settings/updates/upgrade"
-              onsubmit="this.querySelector('button[type=submit]').disabled=true;this.querySelector('button[type=submit]').textContent='Upgrading…';return true;">
+              onsubmit="this.querySelector('button[type=submit]').disabled=true;this.querySelector('button[type=submit]').textContent='Creating backup…';return true;">
             <?= Csrf::field() ?>
             <button type="submit" class="btn" style="background:#2563eb">
-                Upgrade to v<?= htmlspecialchars($release['version'], ENT_QUOTES, 'UTF-8') ?> Now
+                Begin Upgrade to v<?= htmlspecialchars($release['version'], ENT_QUOTES, 'UTF-8') ?>
             </button>
-            <span style="font-size:.8rem;color:#64748b;margin-left:.75rem">This may take 30–60 seconds.</span>
+            <span style="font-size:.8rem;color:#64748b;margin-left:.75rem">Step 1 of 2: creates your backup.</span>
         </form>
     </div>
 </div>

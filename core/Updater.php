@@ -110,8 +110,17 @@ class Updater
         foreach ($pending as $m) {
             try {
                 $sql = (string)file_get_contents($m['file']);
-                if (trim($sql) && !str_starts_with(trim($sql), '--')) {
-                    $db->exec($sql);
+                foreach (self::splitSql($sql) as $stmt) {
+                    try {
+                        $db->exec($stmt);
+                    } catch (\PDOException $e) {
+                        $code = (int)($e->errorInfo[1] ?? 0);
+                        // Swallow: duplicate column (1060), table already exists (1050), duplicate key name (1061)
+                        // These mean the schema change was already applied — safe to continue.
+                        if (!in_array($code, [1060, 1050, 1061], true)) {
+                            throw $e;
+                        }
+                    }
                 }
                 $db->prepare('INSERT IGNORE INTO migrations (version) VALUES (?)')->execute([$m['version']]);
                 $results[] = ['version' => $m['version'], 'status' => 'ok'];
@@ -122,6 +131,23 @@ class Updater
         }
 
         return $results;
+    }
+
+    /** Split a SQL file into individual executable statements, stripping comment-only lines. */
+    private static function splitSql(string $sql): array
+    {
+        $statements = [];
+        foreach (explode(';', $sql) as $chunk) {
+            $lines = array_filter(
+                explode("\n", $chunk),
+                fn($l) => !str_starts_with(trim($l), '--')
+            );
+            $stmt = trim(implode("\n", $lines));
+            if ($stmt !== '') {
+                $statements[] = $stmt;
+            }
+        }
+        return $statements;
     }
 
     public static function ensureMigrationsTable(\PDO $db): void

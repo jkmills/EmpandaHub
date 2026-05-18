@@ -11,6 +11,15 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.2.2] — 2026-05-18
+
+### Fixed
+- Migration runner silently skipped any SQL file whose first non-empty line was a comment (`--`), recorded it as applied, and never retried. All v1.2.0 schema changes (engagement score columns, document library tables) were never applied on existing installs.
+- Added `v1.2.2.sql` repair migration that re-applies the v1.2.0 schema additions idempotently — the runner now swallows duplicate-column and table-already-exists errors, so it is a safe no-op if v1.2.0 ran correctly and a full repair if it was skipped.
+- In-app upgrade redesigned as a two-step process: Step 1 creates the backup and presents a download link **before** any files are changed; Step 2 (a separate confirmation form) applies the file replacement and migrations. Previously the backup download link only appeared after files were already replaced, making it unreachable if the upgrade broke the site.
+
+---
+
 ## [1.2.1] — 2026-05-18
 
 ### Fixed
