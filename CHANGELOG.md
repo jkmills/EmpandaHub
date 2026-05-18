@@ -11,6 +11,13 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.2.3] — 2026-05-18
+
+### Fixed
+- Schema repair: adds `engagement_score`/`engagement_score_at` columns to `contacts` and creates the five document library tables on any install where `v1.2.0` and `v1.2.2` migrations were silently skipped. The fixed migration runner (shipped in v1.2.2 but only active from memory on the next upgrade) now processes this migration correctly.
+
+---
+
 ## [1.2.2] — 2026-05-18
 
 ### Fixed
