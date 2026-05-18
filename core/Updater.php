@@ -17,9 +17,11 @@ class Updater
     public static function installedDbVersion(): string
     {
         try {
-            $db  = Database::getInstance();
-            $row = $db->query('SELECT version FROM migrations ORDER BY applied_at DESC, id DESC LIMIT 1')->fetch();
-            return $row ? $row['version'] : '0.0.0';
+            $db   = Database::getInstance();
+            $rows = $db->query('SELECT version FROM migrations')->fetchAll(\PDO::FETCH_COLUMN);
+            if (!$rows) return '0.0.0';
+            usort($rows, 'version_compare');
+            return end($rows) ?: '0.0.0';
         } catch (\Throwable) {
             return '0.0.0';
         }
@@ -93,9 +95,12 @@ class Updater
 
     public static function hasUpdate(): bool
     {
-        $release = self::latestRelease();
-        if (!$release) return false;
-        return version_compare($release['version'], self::currentVersion(), '>');
+        // Cache-only — never make a live API call from a nav/page render.
+        // Cache is kept fresh by the daily cron and by visiting Settings → Updates.
+        if (!file_exists(self::CACHE_FILE)) return false;
+        $cache = json_decode((string)file_get_contents(self::CACHE_FILE), true);
+        if (!is_array($cache)) return false;
+        return version_compare($cache['version'] ?? '0', self::currentVersion(), '>');
     }
 
     /** @return array<int, array{version: string, status: string, message?: string}> */

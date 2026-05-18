@@ -125,7 +125,7 @@ class SettingsController extends Controller
     public function updates(array $p): void
     {
         Auth::requireRole('super_admin');
-        $release  = Updater::latestRelease();
+        $release  = Updater::latestRelease(forceRefresh: true); // always fresh on this page
         $current  = Updater::currentVersion();
         $dbVer    = Updater::installedDbVersion();
         $pending  = Updater::pendingMigrations();

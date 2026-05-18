@@ -11,6 +11,7 @@ define('ROOT', dirname(__DIR__));
 require ROOT . '/config/config.php';
 require ROOT . '/core/Database.php';
 require ROOT . '/core/EngagementScore.php';
+require ROOT . '/core/Updater.php';
 
 $db  = Database::getInstance();
 $now = date('Y-m-d');
@@ -124,5 +125,9 @@ $log('Recurring donations generated: ' . count($newDonations));
 // --- 7. Engagement score bulk recalculation ---
 $count = EngagementScore::refreshAll($db);
 $log("Engagement scores recalculated: $count contacts.");
+
+// --- 8. Refresh update cache so the nav banner stays current ---
+$release = Updater::latestRelease(forceRefresh: true);
+$log('Update cache refreshed' . ($release ? ': latest is v' . $release['version'] : ': GitHub unreachable, cache unchanged') . '.');
 
 $log('Daily cron complete.');

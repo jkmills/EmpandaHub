@@ -11,6 +11,18 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.2.4] — 2026-05-18
+
+### Fixed
+- `hasUpdate()` no longer makes a live GitHub API call on every page load. It now reads only from the local cache, eliminating the source of the update banner being slow or absent. The cache is refreshed by: visiting Settings → Updates (always fetches fresh), running the daily cron, or clicking "Check for updates now."
+- `installedDbVersion()` now sorts applied migration versions using PHP `version_compare` rather than `ORDER BY applied_at DESC`, which could return the wrong version when two migrations ran within the same second.
+- Daily cron now refreshes the update cache so the nav banner appears proactively after a new release, without any manual action.
+
+### Changed
+- Settings → Updates page always fetches a fresh release check from GitHub on load, so the latest version is always visible without needing to click "Check for updates now."
+
+---
+
 ## [1.2.3] — 2026-05-18
 
 ### Fixed
